@@ -1205,6 +1205,9 @@ function Index() {
   /** no Horizonte a página inteira vira o quadro: sem rolagem da página, tudo esticado */
   const isHorizon = view === "horizonte" && !adding;
 
+  /** no calendário (saldos) aproveitamos a tela como no Horizonte: laterais e topo mais justos */
+  const isSaldos = view === "saldos" && !adding;
+
   if (!loaded) return <LoadingScreen />;
 
   return (
@@ -1248,7 +1251,7 @@ function Index() {
 
       <div className={isHorizon ? "flex h-screen min-w-0 flex-1 flex-col overflow-hidden" : "min-w-0 flex-1"}>
         <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
-          <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 ${isHorizon ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
+          <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 ${isHorizon || isSaldos ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
             <h1 className={`truncate font-display font-semibold text-foreground ${isHorizon ? "text-lg" : "text-xl sm:text-2xl"}`}>
               {view === "diario"
                 ? `previsão gasto diário de ${today.toLocaleDateString("pt-BR", { month: "long" })}`
@@ -1280,7 +1283,7 @@ function Index() {
           </div>
         </header>
 
-      <main className={isHorizon ? "flex min-h-0 w-full flex-1 flex-col px-2 py-2 sm:px-3" : "w-full space-y-6 px-5 py-6 sm:px-8"}>
+      <main className={isHorizon ? "flex min-h-0 w-full flex-1 flex-col px-2 py-2 sm:px-3" : isSaldos ? "w-full space-y-4 px-2 py-2 sm:px-3" : "w-full space-y-6 px-5 py-6 sm:px-8"}>
         {view === "horizonte" && !adding ? (
           <>
           {horizonJump && (() => {
@@ -1474,7 +1477,7 @@ function Index() {
 
         <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1">
-          <div className="sticky top-[61px] z-20 overflow-hidden rounded-t-2xl border border-b-0 border-border bg-secondary">
+          <div className={`sticky z-20 overflow-hidden rounded-t-2xl border border-b-0 border-border bg-secondary ${isSaldos ? "top-[49px]" : "top-[61px]"}`}>
             <div
               ref={tableHeaderRef}
               className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

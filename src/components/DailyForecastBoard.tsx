@@ -1,7 +1,7 @@
 import { FitMoney } from "@/components/FitMoney";
 import { MoneyInput } from "@/components/MoneyInput";
 import { dailyBudgetAmount } from "@/lib/recurrence";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AddWindow } from "@/components/AddWindow";
 import { forecastBudgets, parseWeeks } from "@/lib/forecast";
 
@@ -43,6 +43,12 @@ export function DailyForecastBoard({
   const [tagInput, setTagInput] = useState("");
   const [weeksInput, setWeeksInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Ao abrir pelo botão "adicionar", o campo nome já vem focado e pronto pra digitar.
+  useEffect(() => {
+    if (open && !editing) nameInputRef.current?.focus();
+  }, [open, editing]);
 
   const { monthly, weekly } = useMemo(() => forecastBudgets(items), [items]);
   const divisor = new Date(year, month + 1, 0).getDate();
@@ -226,6 +232,7 @@ export function DailyForecastBoard({
             <label className="block space-y-1">
               <span className="text-xs text-muted-foreground">nome</span>
               <input
+                ref={nameInputRef}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="mercado, gasolina, lanches…"

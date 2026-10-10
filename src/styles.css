@@ -69,6 +69,7 @@
   --color-negative-foreground: var(--negative-foreground);
   --color-negative-deep: var(--negative-deep);
   --color-negative-deep-foreground: var(--negative-deep-foreground);
+  --color-negative-deep-text: var(--negative-deep-text);
 
   --color-horizon-marker: var(--horizon-marker);
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
@@ -184,9 +185,13 @@
   --warning-foreground: oklch(0.28 0.06 85);
   --negative: oklch(0.6 0.2 25);
   --negative-foreground: oklch(0.99 0.01 25);
-  /* 2% mais intenso que --negative: mesmo matiz, um passo adiante. Usado só no Horizonte. */
-  --negative-deep: oklch(0.575 0.204 23);
+  /* Vermelho profundo do Horizonte: mesmo matiz do --negative, mais escuro e saturado,
+     mas ainda sóbrio (sem neon). Usado só no Horizonte. */
+  --negative-deep: oklch(0.5 0.22 23);
   --negative-deep-foreground: oklch(0.99 0.01 23);
+  /* Vermelho vinho (mesma família, bem mais fechado) para os valores dentro do
+     vermelho profundo: destaca o número sobre o fundo sem preto nem neon. */
+  --negative-deep-text: oklch(0.33 0.13 20);
 
   --horizon-marker: oklch(0.6 0.13 25);
 }
@@ -227,6 +232,7 @@
     animation: horizon-marching-ants 0.7s linear infinite;
   }
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   .horizon-cut-marker::after {
