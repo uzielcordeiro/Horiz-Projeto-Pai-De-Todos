@@ -72,6 +72,9 @@
   --color-negative-deep-text: var(--negative-deep-text);
 
   --color-horizon-marker: var(--horizon-marker);
+  --color-horizon-reminder-negative: var(--horizon-reminder-negative);
+  --color-horizon-reminder-positive: var(--horizon-reminder-positive);
+  --color-horizon-reminder-gap: var(--horizon-reminder-gap);
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
 }
@@ -194,7 +197,21 @@
   --negative-deep-text: oklch(0.33 0.13 20);
 
   --horizon-marker: oklch(0.6 0.13 25);
+  --horizon-reminder-negative: oklch(0.52 0.21 25);
+  --horizon-reminder-positive: oklch(0.94 0.17 145);
+  --horizon-reminder-gap: oklch(0.99 0.005 150);
 }
+
+.horizon-reminder {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, currentColor 0 4px, var(--horizon-reminder-gap) 4px 6px, currentColor 6px);
+}
+
+.horizon-reminder-negative { color: var(--horizon-reminder-negative); }
+.horizon-reminder-positive { color: var(--horizon-reminder-positive); }
 
 @layer base {
   body {

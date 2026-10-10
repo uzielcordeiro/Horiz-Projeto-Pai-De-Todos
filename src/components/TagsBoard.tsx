@@ -2,8 +2,10 @@ import { FitMoney } from "@/components/FitMoney";
 import { useEffect, useMemo, useState } from "react";
 
 import { AddWindow } from "@/components/AddWindow";
+import { SectionBadge, type SectionKind } from "@/components/SectionBadge";
+import { Button } from "@/components/ui/button";
 
-export type TagRow = { tag: string; total: number; count: number };
+export type TagRow = { tag: string; total: number; count: number; kinds: SectionKind[] };
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -94,14 +96,18 @@ export function TagsBoard({
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="divide-y divide-border">
             {list.map((r) => (
-              <button
+               <Button
+                 variant="ghost"
                 key={r.tag}
                 type="button"
                 onClick={() => setSelected(r)}
                 aria-label={`editar tag ${r.tag}`}
-                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50"
+                 className="flex h-auto w-full flex-wrap justify-start gap-3 whitespace-normal rounded-none px-4 py-4 text-left transition-colors hover:bg-accent/50"
               >
-                <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
+                 <span className="flex shrink-0 items-center gap-1" aria-label="seções da tag">
+                   {r.kinds.map((kind) => <SectionBadge key={kind} kind={kind} />)}
+                 </span>
+                 <span className="min-w-0 break-words rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
                   #{r.tag}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
@@ -110,7 +116,7 @@ export function TagsBoard({
                 <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
                   <FitMoney value={r.total} />
                 </span>
-              </button>
+               </Button>
             ))}
           </div>
         </div>

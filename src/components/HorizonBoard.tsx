@@ -1,5 +1,5 @@
 import { FitMoney } from "@/components/FitMoney";
-import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { useRef } from "react";
 
 type Status = "surplus" | "positive" | "warning" | "negative" | "negativeDeep";
 
@@ -47,85 +47,12 @@ type Props = {
 
 export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const gestureRef = useRef<{
-    pointerId: number;
-    lastX: number;
-    lastY: number;
-    axis: "x" | "y" | null;
-  } | null>(null);
-  const wheelAxisRef = useRef<{ axis: "x" | "y"; expiresAt: number } | null>(null);
   const nav =
     "grid size-9 shrink-0 place-items-center rounded-full border-2 border-foreground text-foreground transition-colors hover:bg-accent";
   /** verde-escuro enquanto aperta a seta de mês, vermelho enquanto aperta a seta de ano */
   const navMonth = `${nav} active:bg-surplus`;
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
-
-  const moveVertically = (scroller: HTMLDivElement, delta: number) => {
-    const before = scroller.scrollTop;
-    const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-    const next = Math.min(max, Math.max(0, before + delta));
-    scroller.scrollTop = next;
-    const remainder = delta - (next - before);
-    if (remainder !== 0) window.scrollBy({ top: remainder, behavior: "auto" });
-  };
-
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      const multiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? scroller.clientHeight : 1;
-      const dx = event.deltaX * multiplier;
-      const dy = event.deltaY * multiplier;
-      const now = performance.now();
-      const active = wheelAxisRef.current;
-      const axis = active && active.expiresAt > now
-        ? active.axis
-        : Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-      wheelAxisRef.current = { axis, expiresAt: now + 140 };
-
-      if (axis === "x") scroller.scrollLeft += dx || dy;
-      else moveVertically(scroller, dy || dx);
-    };
-
-    scroller.addEventListener("wheel", onWheel, { passive: false });
-    return () => scroller.removeEventListener("wheel", onWheel);
-  }, []);
-
-  const beginTouch = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse" || !event.isPrimary) return;
-    gestureRef.current = {
-      pointerId: event.pointerId,
-      lastX: event.clientX,
-      lastY: event.clientY,
-      axis: null,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const moveTouch = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const gesture = gestureRef.current;
-    if (!gesture || gesture.pointerId !== event.pointerId) return;
-    const dx = gesture.lastX - event.clientX;
-    const dy = gesture.lastY - event.clientY;
-
-    if (!gesture.axis) {
-      if (Math.hypot(dx, dy) < 6) return;
-      gesture.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-    }
-
-    event.preventDefault();
-    if (gesture.axis === "x") event.currentTarget.scrollLeft += dx;
-    else moveVertically(event.currentTarget, dy);
-    gesture.lastX = event.clientX;
-    gesture.lastY = event.clientY;
-  };
-
-  const endTouch = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (gestureRef.current?.pointerId === event.pointerId) gestureRef.current = null;
-  };
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -157,11 +84,7 @@ export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate 
       <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border">
         <div
           ref={scrollerRef}
-          className="min-h-0 flex-1 touch-none overflow-auto overscroll-none rounded-2xl"
-          onPointerDown={beginTouch}
-          onPointerMove={moveTouch}
-          onPointerUp={endTouch}
-          onPointerCancel={endTouch}
+          className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl"
         >
           <div className="flex min-w-max">
             {months.map((mo) => (
@@ -179,6 +102,15 @@ export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate 
                     const d = mo.days[i];
                     if (!d)
                       return <div key={i} className="h-8 bg-muted/20" aria-hidden />;
+                    const lowest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
+                      !best || day.balance < best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
+                    undefined);
+                    const highest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
+                      !best || day.balance > best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
+                    undefined);
+                    const reminder = d.date === lowest?.date && d.balance <= -1000
+                      ? "negative"
+                      : d.date === highest?.date && d.balance > 2000 ? "positive" : undefined;
                     const isToday = d.date === todayIso;
                     return (
                       <button
@@ -198,8 +130,18 @@ export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate 
                         >
                           {d.day}
                         </span>
-                        <span className={`pr-2 text-right tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
-                          <FitMoney value={d.balance} symbol={false} />
+                        <span className={`grid min-w-0 grid-cols-[16px_minmax(0,1fr)] items-center gap-1 px-1.5 text-right tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
+                          <span className="grid size-4 place-items-center">
+                            {reminder && (
+                              <span
+                                role="img"
+                                aria-label={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
+                                title={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
+                                className={`horizon-reminder horizon-reminder-${reminder}`}
+                              />
+                            )}
+                          </span>
+                          <span data-fit className="min-w-0"><FitMoney value={d.balance} symbol={false} /></span>
                         </span>
                       </button>
                     );

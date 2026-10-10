@@ -10,6 +10,7 @@ import { MonthCalendar } from "@/components/MonthCalendar";
 import { HorizonBoard, type HorizonDay, type HorizonMonth } from "@/components/HorizonBoard";
 import { TotalsBoard } from "@/components/TotalsBoard";
 import { TagsBoard, type TagRow } from "@/components/TagsBoard";
+import { SectionBadge, SECTION_KINDS, type SectionKind } from "@/components/SectionBadge";
 import { forecastBudgets } from "@/lib/forecast";
 import { cents } from "@/lib/money-format";
 import { monthItemLabel } from "@/lib/month-item-label";
@@ -236,6 +237,7 @@ function Index() {
   const [freq, setFreq] = useState<Freq>("unico");
   const [infinite, setInfinite] = useState(false);
   const [installments, setInstallments] = useState("");
+  const installmentsRef = useRef<HTMLInputElement>(null);
   const [daysOfMonth, setDaysOfMonth] = useState<number[]>([]);
 
 
@@ -497,22 +499,23 @@ function Index() {
 
   /** todas as tags em uso, de todos os lançamentos e repetições (espelho do calendário) */
   const tagRows = useMemo<TagRow[]>(() => {
-    const map = new Map<string, { total: number; count: number }>();
-    const push = (tags: string[] | undefined, amount: number) => {
+    const map = new Map<string, { total: number; count: number; kinds: Set<SectionKind> }>();
+    const push = (tags: string[] | undefined, amount: number, kind: SectionKind) => {
       for (const t of new Set(tags ?? [])) {
-        const cur = map.get(t) ?? { total: 0, count: 0 };
-        map.set(t, { total: cents(cur.total + amount), count: cur.count + 1 });
+        const cur = map.get(t) ?? { total: 0, count: 0, kinds: new Set<SectionKind>() };
+        cur.kinds.add(kind);
+        map.set(t, { total: cents(cur.total + amount), count: cur.count + 1, kinds: cur.kinds });
       }
     };
-    for (const e of entries) push(e.tags, e.amount);
+    for (const e of entries) push(e.tags, e.amount, e.kind);
     // repetição: uma tag vale para todas as parcelas; sem fim conta até o mês aberto
     const untilEnd = iso(cursor.y, cursor.m, new Date(cursor.y, cursor.m + 1, 0).getDate());
     for (const r of recurrences) {
       if (!r.tags?.length) continue;
       const until = r.installments != null ? "9999-12-31" : untilEnd;
-      for (const o of occurrencesUntil(r, until)) push(r.tags, o.amount);
+      for (const o of occurrencesUntil(r, until)) push(r.tags, o.amount, r.kind);
     }
-    return Array.from(map, ([tag, v]) => ({ tag, total: v.total, count: v.count }));
+    return Array.from(map, ([tag, v]) => ({ tag, total: v.total, count: v.count, kinds: SECTION_KINDS.filter((kind) => v.kinds.has(kind)) }));
   }, [entries, recurrences, cursor]);
 
   /** Renomeia uma tag em todos os lançamentos (valores não mudam). */
@@ -1166,14 +1169,6 @@ function Index() {
   const isToday = (day: number) =>
     cursor.y === today.getFullYear() && cursor.m === today.getMonth() && day === today.getDate();
 
-  const kindBadge: Record<Kind, string> = {
-    entradas: "bg-positive text-positive-foreground",
-    saidas: "bg-negative text-negative-foreground",
-    diarios: "bg-chart-4 text-primary-foreground",
-    economias: "bg-primary text-primary-foreground",
-    cartao: "bg-chart-1 text-primary-foreground",
-  };
-
   const chip = (active: boolean) =>
     `h-8 min-w-8 rounded-lg border px-2 text-xs font-medium transition-colors ${
       active
@@ -1496,12 +1491,7 @@ function Index() {
                   key={k.key}
                   className="flex items-center justify-end gap-1.5 border-l border-border/70 px-2"
                 >
-                  <span
-                    aria-hidden
-                    className={`grid size-4 place-items-center rounded-full text-[9px] font-bold ${kindBadge[k.key]}`}
-                  >
-                    {k.title.charAt(0).toUpperCase()}
-                  </span>
+                  <SectionBadge kind={k.key} compact />
                   {k.title}
                 </span>
               ))}
@@ -2167,7 +2157,12 @@ function Index() {
                   </Button>
                   <button
                     type="button"
-                    onClick={() => setFreq("mensal")}
+                    onClick={() => {
+                      setFreq("mensal");
+                      if (!infinite) {
+                        requestAnimationFrame(() => installmentsRef.current?.focus());
+                      }
+                    }}
                     className={chip(freq === "mensal")}
                   >
                     mensal
@@ -2192,6 +2187,7 @@ function Index() {
                     </label>
                     <div className="flex items-center gap-2">
                       <input
+                        ref={installmentsRef}
                         id="repetition-count"
                         inputMode="numeric"
                         pattern="[0-9]*"
