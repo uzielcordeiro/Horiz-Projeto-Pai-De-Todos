@@ -21,9 +21,13 @@ export function useCalendarSwipe(onShift: (delta: number) => void, canGoBack: bo
     let active = true;
     let animation: Animation | undefined;
 
+    // The element may hold a carousel of month panels side by side; one gesture
+    // always crosses exactly one panel (one month), never the whole track.
+    const panelWidth = () => element.clientWidth / (element.childElementCount || 1);
     const track = (movement: number) => {
       // Stop at the current month instead of dragging into past months.
-      offset = movement > 0 && !latest.current.canGoBack ? 0 : Math.max(-element.clientWidth, Math.min(element.clientWidth, movement));
+      const width = panelWidth();
+      offset = movement > 0 && !latest.current.canGoBack ? 0 : Math.max(-width, Math.min(width, movement));
       element.style.transform = `translateX(${offset}px)`;
       element.style.willChange = "transform";
     };
@@ -46,12 +50,17 @@ export function useCalendarSwipe(onShift: (delta: number) => void, canGoBack: bo
         animation?.cancel();
       };
       if (direction) {
-        await animateTo(-direction * element.clientWidth);
+        await animateTo(-direction * panelWidth());
         if (!active) return;
         flushSync(() => latest.current.onShift(direction));
-        track(direction * element.clientWidth);
+        // Após a troca, o painel do meio já mostra o mês novo: zera na hora,
+        // sem segunda animação (evita o saldo "vir duas vezes").
+        animation?.cancel();
+        offset = 0;
+        element.style.transform = "translateX(0px)";
+      } else {
+        await animateTo(0);
       }
-      await animateTo(0);
       element.style.removeProperty("transform");
       element.style.removeProperty("will-change");
       locked = false;

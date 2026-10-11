@@ -17,3 +17,7 @@
 - [x] Verificar gestos com mouse, rolagem horizontal e toque, limite do mês atual, navegação existente e 86 testes.
 - [x] Corrigir o sentido do trackpad e acompanhar o dedo durante o gesto sem espera inicial.
 - [x] Verificar movimento durante o gesto, alinhamento final e limite vigente com mouse, toque e trackpad.
+
+# Informações nas Tags
+- [x] Manter o visual e exibir dia/mês e parcelas no formato 1/N lançamentos, ou “não repete” sem parcelamento.
+- [x] Verificar as categorias, filtros e edição de Tags.

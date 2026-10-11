@@ -2,10 +2,10 @@ import { FitMoney } from "@/components/FitMoney";
 import { useEffect, useMemo, useState } from "react";
 
 import { AddWindow } from "@/components/AddWindow";
-import { SectionBadge, type SectionKind } from "@/components/SectionBadge";
+import { SectionBadge } from "@/components/SectionBadge";
 import { Button } from "@/components/ui/button";
-
-export type TagRow = { tag: string; total: number; count: number; kinds: SectionKind[] };
+import type { TagRow } from "@/lib/tag-summary";
+export type { TagRow } from "@/lib/tag-summary";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -107,11 +107,19 @@ export function TagsBoard({
                  <span className="flex shrink-0 items-center gap-1" aria-label="seções da tag">
                    {r.kinds.map((kind) => <SectionBadge key={kind} kind={kind} />)}
                  </span>
-                 <span className="min-w-0 break-words rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
-                  #{r.tag}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                  {r.count} lançamento{r.count === 1 ? "" : "s"}
+                 <span className="min-w-0 flex-1 space-y-1.5">
+                   <span className="inline-block max-w-full break-words rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
+                     #{r.tag}
+                   </span>
+                   <span className="block space-y-1 text-xs font-normal text-muted-foreground">
+                     {r.details.map((detail, index) => (
+                       <span key={`${detail.date}-${index}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 tabular-nums">
+                         <time dateTime={detail.date}>{detail.date.slice(8, 10)}/{detail.date.slice(5, 7)}</time>
+                         <span aria-hidden>{" · "}</span>
+                         <span>{detail.installments != null ? `1/${detail.installments} lançamentos` : "não repete"}</span>
+                       </span>
+                     ))}
+                   </span>
                 </span>
                 <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
                   <FitMoney value={r.total} />

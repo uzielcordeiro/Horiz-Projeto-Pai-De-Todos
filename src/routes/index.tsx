@@ -10,6 +10,7 @@ import { MonthCalendar } from "@/components/MonthCalendar";
 import { HorizonBoard, type HorizonDay, type HorizonMonth } from "@/components/HorizonBoard";
 import { TotalsBoard } from "@/components/TotalsBoard";
 import { TagsBoard, type TagRow } from "@/components/TagsBoard";
+import { summarizeTags } from "@/lib/tag-summary";
 import { SectionBadge, SECTION_KINDS, type SectionKind } from "@/components/SectionBadge";
 import { forecastBudgets } from "@/lib/forecast";
 import { cents } from "@/lib/money-format";
@@ -191,6 +192,85 @@ type DayItem = {
 };
 
 type Freq = "unico" | "diario" | "mensal" | "semanal";
+
+/** Linhas da tabela de saldos de um mês qualquer (usado pelos 3 painéis do carrossel). */
+function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number, m: number) {
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const openingDate = iso(y, m, 1);
+  const opening =
+    signedTotal(sorted.filter((e) => e.date < openingDate)) +
+    recurrences.reduce((s, r) => {
+      const sign = balanceSign(r.kind as Kind, r.horizonTransfer);
+      return cents(s + sign * sumBefore(r, openingDate));
+    }, 0);
+
+  const byDate = new Map<string, Occurrence[]>();
+  for (const r of recurrences) {
+    for (const o of occurrencesInMonth(r, y, m)) {
+      const list = byDate.get(o.date) ?? [];
+      list.push(o);
+      byDate.set(o.date, list);
+    }
+  }
+
+  let running = opening;
+
+  const list = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const date = iso(y, m, day);
+    const dayEntries = sorted.filter((e) => e.date === date);
+    const dayOccurrences = byDate.get(date) ?? [];
+
+    const items: DayItem[] = [
+      ...dayEntries.map((e) => {
+        const k = KINDS.find((x) => x.key === e.kind)!;
+        return {
+          key: e.id,
+          kind: e.kind,
+          title: k.title,
+          sign: balanceSign(e.kind, e.horizonTransfer),
+          amount: e.amount,
+          detail: e.label,
+          tags: e.tags ?? [],
+          entryId: e.id,
+          date,
+          horizonTransfer: e.horizonTransfer === true,
+        } satisfies DayItem;
+      }),
+      ...dayOccurrences.map((o) => {
+        const k = KINDS.find((x) => x.key === o.kind) ?? KINDS[1]!;
+        return {
+          key: `${o.recurrenceId}-${o.date}`,
+          kind: k.key,
+          title: k.title,
+          sign: balanceSign(k.key, o.horizonTransfer),
+          amount: o.amount,
+          detail: `${o.name || o.label}${
+            o.total ? ` · ${o.index}/${o.total}` : " · recorrente"
+          }`,
+          recurrenceId: o.recurrenceId,
+          tags: o.tags,
+          date: o.date,
+          horizonTransfer: o.horizonTransfer === true,
+        } satisfies DayItem;
+      }),
+    ];
+
+    const totals = {} as Record<Kind, number>;
+    for (const k of KINDS) {
+      totals[k.key] = items
+        .filter((it) => it.kind === k.key)
+        .reduce((s, it) => cents(s + it.amount), 0);
+    }
+    running = cents(running + items.reduce((s, it) => cents(s + it.sign * it.amount), 0));
+    return { day, date, totals, balance: running, items };
+  });
+
+  return { list, opening, closing: running };
+}
+
+type MonthRows = ReturnType<typeof computeMonthRows>;
 
 function Index() {
   const today = new Date();
@@ -405,81 +485,21 @@ function Index() {
 
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
 
-  const rows = useMemo(() => {
-    const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-    const openingDate = iso(cursor.y, cursor.m, 1);
-    const opening =
-      signedTotal(sorted.filter((e) => e.date < openingDate)) +
-      recurrences.reduce((s, r) => {
-        const sign = balanceSign(r.kind as Kind, r.horizonTransfer);
-        return cents(s + sign * sumBefore(r, openingDate));
-      }, 0);
-
-    const byDate = new Map<string, Occurrence[]>();
-    for (const r of recurrences) {
-      for (const o of occurrencesInMonth(r, cursor.y, cursor.m)) {
-        const list = byDate.get(o.date) ?? [];
-        list.push(o);
-        byDate.set(o.date, list);
-      }
-    }
-
-    let running = opening;
-
-    const list = Array.from({ length: daysInMonth }, (_, i) => {
-      const day = i + 1;
-      const date = iso(cursor.y, cursor.m, day);
-      const dayEntries = sorted.filter((e) => e.date === date);
-      const dayOccurrences = byDate.get(date) ?? [];
-
-      const items: DayItem[] = [
-        ...dayEntries.map((e) => {
-          const k = KINDS.find((x) => x.key === e.kind)!;
-          return {
-            key: e.id,
-            kind: e.kind,
-            title: k.title,
-            sign: balanceSign(e.kind, e.horizonTransfer),
-            amount: e.amount,
-            detail: e.label,
-            tags: e.tags ?? [],
-            entryId: e.id,
-            date,
-            horizonTransfer: e.horizonTransfer === true,
-          } satisfies DayItem;
-        }),
-        ...dayOccurrences.map((o) => {
-          const k = KINDS.find((x) => x.key === o.kind) ?? KINDS[1]!;
-          return {
-            key: `${o.recurrenceId}-${o.date}`,
-            kind: k.key,
-            title: k.title,
-            sign: balanceSign(k.key, o.horizonTransfer),
-            amount: o.amount,
-            detail: `${o.name || o.label}${
-              o.total ? ` · ${o.index}/${o.total}` : " · recorrente"
-            }`,
-            recurrenceId: o.recurrenceId,
-            tags: o.tags,
-            date: o.date,
-            horizonTransfer: o.horizonTransfer === true,
-          } satisfies DayItem;
-        }),
-
-      ];
-
-      const totals = {} as Record<Kind, number>;
-      for (const k of KINDS) {
-        totals[k.key] = items
-          .filter((it) => it.kind === k.key)
-          .reduce((s, it) => cents(s + it.amount), 0);
-      }
-      running = cents(running + items.reduce((s, it) => cents(s + it.sign * it.amount), 0));
-      return { day, date, totals, balance: running, items };
-    });
-
-    return { list, opening, closing: running };
-  }, [entries, recurrences, cursor, daysInMonth]);
+  const rows = useMemo(
+    () => computeMonthRows(entries, recurrences, cursor.y, cursor.m),
+    [entries, recurrences, cursor],
+  );
+  // Painéis vizinhos do carrossel: deslizam junto durante o arrasto.
+  const prevCursor = shiftCalendarMonth(cursor, -1);
+  const nextCursor = shiftCalendarMonth(cursor, 1);
+  const prevRows = useMemo(
+    () => computeMonthRows(entries, recurrences, prevCursor.y, prevCursor.m),
+    [entries, recurrences, prevCursor.y, prevCursor.m],
+  );
+  const nextRows = useMemo(
+    () => computeMonthRows(entries, recurrences, nextCursor.y, nextCursor.m),
+    [entries, recurrences, nextCursor.y, nextCursor.m],
+  );
 
   const monthTotals = useMemo(() => {
     const t = {} as Record<Kind, number>;
@@ -520,23 +540,8 @@ function Index() {
 
   /** todas as tags em uso, de todos os lançamentos e repetições (espelho do calendário) */
   const tagRows = useMemo<TagRow[]>(() => {
-    const map = new Map<string, { total: number; count: number; kinds: Set<SectionKind> }>();
-    const push = (tags: string[] | undefined, amount: number, kind: SectionKind) => {
-      for (const t of new Set(tags ?? [])) {
-        const cur = map.get(t) ?? { total: 0, count: 0, kinds: new Set<SectionKind>() };
-        cur.kinds.add(kind);
-        map.set(t, { total: cents(cur.total + amount), count: cur.count + 1, kinds: cur.kinds });
-      }
-    };
-    for (const e of entries) push(e.tags, e.amount, e.kind);
-    // repetição: uma tag vale para todas as parcelas; sem fim conta até o mês aberto
     const untilEnd = iso(cursor.y, cursor.m, new Date(cursor.y, cursor.m + 1, 0).getDate());
-    for (const r of recurrences) {
-      if (!r.tags?.length) continue;
-      const until = r.installments != null ? "9999-12-31" : untilEnd;
-      for (const o of occurrencesUntil(r, until)) push(r.tags, o.amount, r.kind);
-    }
-    return Array.from(map, ([tag, v]) => ({ tag, total: v.total, count: v.count, kinds: SECTION_KINDS.filter((kind) => v.kinds.has(kind)) }));
+    return summarizeTags(entries, recurrences, untilEnd);
   }, [entries, recurrences, cursor]);
 
   /** Renomeia uma tag em todos os lançamentos (valores não mudam). */
@@ -665,6 +670,207 @@ function Index() {
   }
 
   const selectedRow = selectedDay == null ? null : rows.list[selectedDay - 1] ?? null;
+
+  /** Uma linha de dia da tabela de saldos; nos painéis vizinhos é só visual. */
+  function renderDayRow(row: MonthRows["list"][number], interactive: boolean) {
+    const s = statusOf(row.balance);
+    const open = interactive && selectedDay === row.day;
+    const today = interactive && isToday(row.day);
+    const cells = (
+      <>
+        <span
+          className={`grid size-8 place-items-center rounded-lg text-sm font-semibold ${
+            today ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+          }`}
+        >
+          {row.day}
+        </span>
+        {KINDS.map((k) => (
+          <span
+            key={k.key}
+            data-kind={k.key}
+            className={`flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2 text-sm tabular-nums ${
+              row.totals[k.key] > 0
+                ? `font-medium ${kindTone[k.key]}`
+                : "text-muted-foreground/60"
+            }`}
+          >
+            <FitMoney value={row.totals[k.key]} />
+          </span>
+        ))}
+        <span
+          data-kind="saldos"
+          data-fit
+          className="flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2"
+        >
+          <span
+            className={`min-w-0 rounded-lg px-2.5 py-1 text-right text-sm font-semibold tabular-nums ${saldoCell[s]}`}
+          >
+            <FitMoney value={row.balance} />
+          </span>
+        </span>
+      </>
+    );
+    const gridClass = `grid w-full ${GRID} items-stretch px-3 py-3.5 text-left transition-colors ${
+      open ? "bg-accent/60" : ""
+    } ${today ? "border-b-2 border-foreground" : ""}`;
+    if (!interactive) {
+      return (
+        <div key={row.date}>
+          <div className={gridClass}>{cells}</div>
+        </div>
+      );
+    }
+    return (
+      <div key={row.date} data-day-row={row.date}>
+        <button
+          onClick={(ev) => {
+            resetForm();
+            setError(null);
+            setShowCal(false);
+            setSelectedDay(row.day);
+            setFormDate(row.date);
+            const clickedKind = (ev.target as HTMLElement)
+              .closest("[data-kind]")
+              ?.getAttribute("data-kind") as Kind | "saldos" | null;
+            // clique fora de uma coluna (cantos/espaços): não abre nada
+            if (!clickedKind) return;
+            const openingKind = clickedKind;
+            const categoryItems = row.items.filter(
+              (item) => item.recurrenceId !== FORECAST_ID && item.kind === openingKind,
+            );
+            // saldos e diários: só reflexo (manipulação nas outras colunas / no Menu)
+            if (openingKind === "saldos") {
+              setWindowKind("saldos");
+              setEditTarget(null);
+              setActiveItemKey(null);
+              setFormOrigin("standard");
+              setWindowMode("info");
+              setAdding(true);
+              return;
+            }
+            if (openingKind === "diarios") {
+              setKind("diarios");
+              setWindowKind("diarios");
+              setEditTarget(null);
+              setActiveItemKey(null);
+              setFormOrigin("standard");
+              setWindowMode("info");
+              setAdding(true);
+              return;
+            }
+            // poupança: sempre só reflexo (manipulação no Horizonte)
+            if (openingKind === "economias") {
+              setWindowKind("economias");
+              setEditTarget(null);
+              setActiveItemKey(
+                categoryItems.find((item) => item.horizonTransfer)?.key ?? null,
+              );
+              setFormOrigin("standard");
+              setWindowMode("info");
+              setAdding(true);
+              return;
+            }
+            resetForm();
+            setError(null);
+            setShowCal(false);
+            setSelectedDay(row.day);
+            setFormDate(row.date);
+            setKind(openingKind);
+            setWindowKind(openingKind);
+            setEditTarget(null);
+            setFormOrigin("standard");
+            const monthListKind =
+              openingKind === "entradas" ||
+              openingKind === "saidas" ||
+              openingKind === "cartao";
+            setActiveItemKey(
+              !monthListKind && categoryItems.length === 1
+                ? categoryItems[0]?.key ?? null
+                : null,
+            );
+            setWindowMode(
+              categoryItems.length === 0
+                ? "add"
+                : monthListKind
+                  ? "month"
+                  : categoryItems.length === 1
+                    ? "detail"
+                    : "list",
+            );
+            setAdding(true);
+          }}
+          className={`${gridClass} hover:bg-accent/50`}
+        >
+          {cells}
+        </button>
+      </div>
+    );
+  }
+
+  /** Um painel do carrossel: a tabela de saldos completa de um mês. */
+  function renderMonthPanel(monthRows: MonthRows, interactive: boolean) {
+    const totals = {} as Record<Kind, number>;
+    for (const k of KINDS)
+      totals[k.key] = monthRows.list.reduce((s, r) => cents(s + r.totals[k.key]), 0);
+    const closing = statusOf(monthRows.closing);
+    return (
+      <div
+        key={interactive ? "atual" : (monthRows.list[0]?.date ?? "vizinho")}
+        className={`w-1/3 shrink-0 ${interactive ? "" : "pointer-events-none select-none"}`}
+        aria-hidden={!interactive}
+      >
+        <section
+          ref={interactive ? tableRef : undefined}
+          className="min-w-0 touch-pan-y overflow-x-auto rounded-b-2xl border border-border bg-card"
+          onScroll={
+            interactive
+              ? (event) => {
+                  if (
+                    tableHeaderRef.current &&
+                    tableHeaderRef.current.scrollLeft !== event.currentTarget.scrollLeft
+                  ) {
+                    tableHeaderRef.current.scrollLeft = event.currentTarget.scrollLeft;
+                  }
+                }
+              : undefined
+          }
+        >
+          <div className="min-w-[760px]">
+            <div className="divide-y divide-border">
+              {monthRows.list.map((row) => renderDayRow(row, interactive))}
+            </div>
+
+            <div
+              className={`grid ${GRID} items-stretch border-t border-border bg-secondary px-3 py-3 text-sm font-semibold`}
+            >
+              <span className="flex items-center text-xs uppercase tracking-wide text-muted-foreground">
+                total
+              </span>
+              {KINDS.map((k) => (
+                <span
+                  key={k.key}
+                  className={`flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2 tabular-nums ${kindTone[k.key]}`}
+                >
+                  <FitMoney value={totals[k.key]} />
+                </span>
+              ))}
+              <span
+                data-fit
+                className="flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2"
+              >
+                <span
+                  className={`min-w-0 rounded-lg px-2.5 py-1 text-right tabular-nums ${saldoCell[closing]}`}
+                >
+                  <FitMoney value={monthRows.closing} />
+                </span>
+              </span>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
 
   function resetForm() {
@@ -1500,7 +1706,7 @@ function Index() {
 
 
         <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start">
-        <div ref={calendarSwipeRef} className="min-w-0 flex-1 touch-pan-y overflow-x-clip">
+        <div className="min-w-0 flex-1 overflow-x-clip">
           <div className={`sticky z-20 overflow-hidden rounded-t-2xl border border-b-0 border-border bg-secondary ${isSaldos ? "top-[49px]" : "top-[61px]"}`}>
             <div
               ref={tableHeaderRef}
@@ -1533,170 +1739,11 @@ function Index() {
             </div>
           </div>
 
-          <section
-            ref={tableRef}
-            className="min-w-0 touch-pan-y overflow-x-auto rounded-b-2xl border border-border bg-card"
-            onScroll={(event) => {
-              if (tableHeaderRef.current && tableHeaderRef.current.scrollLeft !== event.currentTarget.scrollLeft) {
-                tableHeaderRef.current.scrollLeft = event.currentTarget.scrollLeft;
-              }
-            }}
-          >
-          <div className="min-w-[760px]">
-
-            <div className="divide-y divide-border">
-              {rows.list.map((row) => {
-                const s = statusOf(row.balance);
-                const open = selectedDay === row.day;
-                return (
-                  <div key={row.date} data-day-row={row.date}>
-                    <button
-                      onClick={(ev) => {
-                        resetForm();
-                        setError(null);
-                        setShowCal(false);
-                        setSelectedDay(row.day);
-                        setFormDate(row.date);
-                        const clickedKind = (ev.target as HTMLElement)
-                          .closest("[data-kind]")
-                          ?.getAttribute("data-kind") as Kind | "saldos" | null;
-                        // clique fora de uma coluna (cantos/espaços): não abre nada
-                        if (!clickedKind) return;
-                        const openingKind = clickedKind;
-                        const categoryItems = row.items.filter(
-                          (item) => item.recurrenceId !== FORECAST_ID && item.kind === openingKind,
-                        );
-                        // saldos e diários: só reflexo (manipulação nas outras colunas / no Menu)
-                        if (openingKind === "saldos") {
-                          setWindowKind("saldos");
-                          setEditTarget(null);
-                          setActiveItemKey(null);
-                          setFormOrigin("standard");
-                          setWindowMode("info");
-                          setAdding(true);
-                          return;
-                        }
-                        if (openingKind === "diarios") {
-                          setKind("diarios");
-                          setWindowKind("diarios");
-                          setEditTarget(null);
-                          setActiveItemKey(null);
-                          setFormOrigin("standard");
-                          setWindowMode("info");
-                          setAdding(true);
-                          return;
-                        }
-                        // poupança: sempre só reflexo (manipulação no Horizonte)
-                        if (openingKind === "economias") {
-                          setWindowKind("economias");
-                          setEditTarget(null);
-                          setActiveItemKey(
-                            categoryItems.find((item) => item.horizonTransfer)?.key ?? null,
-                          );
-                          setFormOrigin("standard");
-                          setWindowMode("info");
-                          setAdding(true);
-                          return;
-                        }
-                        resetForm();
-                        setError(null);
-                        setShowCal(false);
-                        setSelectedDay(row.day);
-                        setFormDate(row.date);
-                        setKind(openingKind);
-                        setWindowKind(openingKind);
-                        setEditTarget(null);
-                        setFormOrigin("standard");
-                        const monthListKind =
-                          openingKind === "entradas" ||
-                          openingKind === "saidas" ||
-                          openingKind === "cartao";
-                        setActiveItemKey(
-                          !monthListKind && categoryItems.length === 1
-                            ? categoryItems[0]?.key ?? null
-                            : null,
-                        );
-                        setWindowMode(
-                          categoryItems.length === 0
-                            ? "add"
-                            : monthListKind
-                              ? "month"
-                              : categoryItems.length === 1
-                                ? "detail"
-                                : "list",
-                        );
-                        setAdding(true);
-                      }}
-                      className={`grid w-full ${GRID} items-stretch px-3 py-3.5 text-left transition-colors hover:bg-accent/50 ${
-                        open ? "bg-accent/60" : ""
-                      } ${isToday(row.day) ? "border-b-2 border-foreground" : ""}`}
-                    >
-                      <span
-                        className={`grid size-8 place-items-center rounded-lg text-sm font-semibold ${
-                          isToday(row.day)
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {row.day}
-                      </span>
-                      {KINDS.map((k) => (
-                        <span
-                          key={k.key}
-                          data-kind={k.key}
-                          className={`flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2 text-sm tabular-nums ${
-                            row.totals[k.key] > 0
-                              ? `font-medium ${kindTone[k.key]}`
-                              : "text-muted-foreground/60"
-                          }`}
-                        >
-                          <FitMoney value={row.totals[k.key]} />
-                        </span>
-                      ))}
-                      <span
-                        data-kind="saldos"
-                        data-fit
-                        className="flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2"
-                      >
-                        <span
-                          className={`min-w-0 rounded-lg px-2.5 py-1 text-right text-sm font-semibold tabular-nums ${saldoCell[s]}`}
-                        >
-                          <FitMoney value={row.balance} />
-                        </span>
-                      </span>
-                    </button>
-
-                  </div>
-                );
-              })}
-            </div>
-
-            <div
-              className={`grid ${GRID} items-stretch border-t border-border bg-secondary px-3 py-3 text-sm font-semibold`}
-            >
-              <span className="flex items-center text-xs uppercase tracking-wide text-muted-foreground">
-                total
-              </span>
-              {KINDS.map((k) => (
-                <span
-                  key={k.key}
-                  className={`flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2 tabular-nums ${kindTone[k.key]}`}
-                >
-                  <FitMoney value={monthTotals[k.key]} />
-                </span>
-              ))}
-              <span data-fit
-                        className="flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2">
-                <span
-                  className={`min-w-0 rounded-lg px-2.5 py-1 text-right tabular-nums ${saldoCell[closingStatus]}`}
-                >
-                  <FitMoney value={rows.closing} />
-                </span>
-              </span>
-            </div>
-
+          <div ref={calendarSwipeRef} className="-ml-[100%] flex w-[300%] touch-pan-y">
+            {renderMonthPanel(prevRows, false)}
+            {renderMonthPanel(rows, true)}
+            {renderMonthPanel(nextRows, false)}
           </div>
-        </section>
         </div>
 
 
