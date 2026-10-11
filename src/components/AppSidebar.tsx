@@ -1,4 +1,5 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { CalendarReset } from "@/components/CalendarReset";
 
 type Item = { key: string; label: string; icon: string; soon?: boolean };
 
@@ -13,11 +14,13 @@ export function AppSidebar({
   onAdd,
   onToday,
   onNavigate,
+  onReset,
   active = "saldos",
 }: {
   onAdd: () => void;
   onToday: () => void;
   onNavigate?: (key: string) => void;
+  onReset?: (scope: "month" | "all") => () => void;
   active?: string;
 }) {
   const [open, setOpen] = useState(true);
@@ -146,6 +149,13 @@ export function AppSidebar({
         </button>
       </div>
 
+      {onReset && (
+        <div className="relative min-h-32 flex-1">
+          <div className={`absolute top-1/2 -translate-y-1/2 ${open ? "left-4" : "left-2"}`}>
+            <CalendarReset onReset={onReset} compact={!open} />
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

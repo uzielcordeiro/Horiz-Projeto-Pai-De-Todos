@@ -1168,6 +1168,29 @@ function Index() {
     ]);
   }
 
+  function resetCalendar(scope: "month" | "all") {
+    const snapshot = { entries, recurrences, forecastItems, forecastDivisor, customTags, deletedTags, history };
+    if (scope === "month") {
+      clearMonth();
+    } else {
+      deleteAll();
+      setForecastDivisor(30);
+      setCustomTags([]);
+      setDeletedTags([]);
+      setHistory([]);
+    }
+    return () => {
+      setEntries(snapshot.entries);
+      setRecurrences(snapshot.recurrences);
+      setForecastItems(snapshot.forecastItems);
+      setForecastDivisor(snapshot.forecastDivisor);
+      setCustomTags(snapshot.customTags);
+      setDeletedTags(snapshot.deletedTags);
+      setHistory(snapshot.history);
+      setSelected({});
+    };
+  }
+
   function clearMonthForDate(y: number, m: number) {
     const last = new Date(y, m + 1, 0).getDate();
     clearRange(iso(y, m, 1), iso(y, m, last), [{ y, m }]);
@@ -1225,6 +1248,7 @@ function Index() {
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar
+        onReset={resetCalendar}
         onAdd={() => {
           resetForm();
           setError(null);
@@ -1264,7 +1288,7 @@ function Index() {
 
       <div className={isHorizon ? "flex h-screen min-w-0 flex-1 flex-col overflow-hidden" : "min-w-0 flex-1"}>
         <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
-          <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 ${isHorizon || isSaldos ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
+          <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 ${isHorizon || isSaldos ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
             <h1 className={`truncate font-display font-semibold text-foreground ${isHorizon ? "text-lg" : "text-xl sm:text-2xl"}`}>
               {view === "diario"
                 ? `previsão gasto diário de ${today.toLocaleDateString("pt-BR", { month: "long" })}`
@@ -1471,22 +1495,6 @@ function Index() {
           </div>
         </section>
 
-        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3">
-          {confirmAll === "tudo" ? (
-            <>
-              <button onClick={deleteAll} className={dangerBtn}>
-                confirmar: resetar tudo (sistema)
-              </button>
-              <button onClick={() => setConfirmAll(null)} className={actionBtn}>
-                cancelar
-              </button>
-            </>
-          ) : (
-            <button onClick={() => setConfirmAll("tudo")} className={dangerBtn}>
-              resetar tudo (sistema)
-            </button>
-          )}
-        </section>
 
 
 
@@ -1617,7 +1625,7 @@ function Index() {
                         );
                         setAdding(true);
                       }}
-                      className={`grid w-full ${GRID} items-stretch px-3 py-2.5 text-left transition-colors hover:bg-accent/50 ${
+                      className={`grid w-full ${GRID} items-stretch px-3 py-3.5 text-left transition-colors hover:bg-accent/50 ${
                         open ? "bg-accent/60" : ""
                       } ${isToday(row.day) ? "border-b-2 border-foreground" : ""}`}
                     >
