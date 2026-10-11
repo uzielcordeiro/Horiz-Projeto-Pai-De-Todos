@@ -236,24 +236,24 @@ export function TotalsBoard({
             ) : (
               (() => {
                 const list = items?.[openKind] ?? [];
-                const first = list[0];
-                // diários: quando todos os valores do mês são iguais, mostrar apenas um
+                // diários: agrupar trechos com o mesmo valor; cada mudança vira um novo item
                 const visible =
-                  openKind === "diarios" &&
-                  first !== undefined &&
-                  list.length > 1 &&
-                  list.every((it) => it.amount === first.amount)
-                    ? [first]
+                  openKind === "diarios"
+                    ? list.filter((it, i) => i === 0 || it.amount !== list[i - 1]?.amount)
                     : list;
                 return (
                   <div className="space-y-3">
-                        {visible.map((it, i) => (
+                         {visible.map((it, i) => (
                       <div
                         key={`${it.date}-${i}`}
                         className="rounded-2xl border border-border bg-background p-4"
                       >
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          dia {Number(it.date.slice(8, 10))}
+                          {openKind === "diarios"
+                            ? i === 0
+                              ? "média do mês"
+                              : `dia ${Number(it.date.slice(8, 10))} · valor alterado`
+                            : `dia ${Number(it.date.slice(8, 10))}`}
                         </p>
                         <div className="mt-1.5 flex items-center gap-2">
                           <CalendarItemLabel
