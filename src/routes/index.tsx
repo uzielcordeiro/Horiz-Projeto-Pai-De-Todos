@@ -15,6 +15,7 @@ import { forecastBudgets } from "@/lib/forecast";
 import { cents } from "@/lib/money-format";
 import { monthItemLabel } from "@/lib/month-item-label";
 import { CalendarItemLabel } from "@/components/CalendarItemLabel";
+import { HorizonDayList } from "@/components/HorizonDayList";
 
 import { DailyForecastBoard, type ForecastItem } from "@/components/DailyForecastBoard";
 
@@ -199,7 +200,7 @@ function Index() {
   const [cursor, setCursor] = useState({ y: today.getFullYear(), m: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
-  const [windowMode, setWindowMode] = useState<"add" | "month" | "list" | "detail" | "edit" | "info">("add");
+  const [windowMode, setWindowMode] = useState<"add" | "month" | "list" | "detail" | "edit" | "info" | "horizon" | "pick">("add");
   const [activeItemKey, setActiveItemKey] = useState<string | null>(null);
   const [forecastSpent, setForecastSpent] = useState("");
   const [forecastConfirm, setForecastConfirm] = useState(false);
@@ -1384,7 +1385,7 @@ function Index() {
               setEditTarget(null);
               setFormOrigin("horizon");
               setActiveItemKey(null);
-              setWindowMode("add");
+              setWindowMode("horizon");
               setAdding(true);
             }}
           />
@@ -1685,6 +1686,44 @@ function Index() {
             entries.some((e) => e.date.startsWith(monthPrefix)) ||
             recurrences.some((r) => occurrencesInMonth(r, formDateParts.y, formDateParts.m).length > 0);
           const activeItem = windowDayItems.find((item) => item.key === activeItemKey) ?? null;
+          const horizonDayItems = windowDayRow?.items ?? [];
+          const horizonPicking = windowMode === "pick" || (windowMode === "horizon" && horizonDayItems.length === 0);
+          const pickKind = (k: Kind) => {
+            resetForm();
+            setError(null);
+            setShowCal(false);
+            setEditTarget(null);
+            setActiveItemKey(null);
+            setKind(k);
+            setWindowKind(k);
+            setFormOrigin(k === "economias" ? "horizon" : "standard");
+            setWindowMode(k === "diarios" ? "info" : "add");
+          };
+          const editHorizonItem = (key: string) => {
+            const item = horizonDayItems.find((it) => it.key === key);
+            if (!item) return;
+            setWindowKind(item.kind);
+            if (item.recurrenceId === FORECAST_ID) {
+              setKind("diarios");
+              setEditTarget(null);
+              setActiveItemKey(null);
+              setFormOrigin("standard");
+              setWindowMode("info");
+              return;
+            }
+            startFullEdit(item);
+          };
+          const deleteHorizonItem = (key: string, scope: "day" | "future" | "all") => {
+            const item = horizonDayItems.find((it) => it.key === key);
+            if (!item) return;
+            if (item.entryId) deleteItems([item]);
+            else if (item.recurrenceId === FORECAST_ID) setForecastDay(item.date, null);
+            else if (item.recurrenceId) {
+              if (scope === "day") skipOccurrence(item.recurrenceId, item.date);
+              else if (scope === "future") endRecurrenceFrom(item.recurrenceId, item.date);
+              else removeRecurrence(item.recurrenceId);
+            }
+          };
           const closeWindow = () => {
             setAdding(false);
             setForecastRestoring(false);
@@ -1734,14 +1773,35 @@ function Index() {
                 ]
             : undefined;
           const horizonAddWindow =
-            windowMode === "add" &&
+            windowMode === "horizon" ||
+            windowMode === "pick" ||
+            (windowMode === "add" &&
             ((windowKind === "economias" && formOrigin === "horizon") ||
               windowKind === "entradas" ||
               windowKind === "saidas" ||
-              windowKind === "cartao");
+              windowKind === "cartao"));
           return (
           <AddWindow
+            headerAction={
+              windowMode === "horizon" && !horizonPicking ? (
+                <button
+                  type="button"
+                  onClick={() => setWindowMode("pick")}
+                  aria-label="adicionar"
+                  title="adicionar"
+                  className="flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/60"
+                >
+                  <span className="w-4 shrink-0 text-center text-positive">＋</span>
+                  <span>adicionar</span>
+                </button>
+              ) : undefined
+            }
             title={
+              horizonPicking
+                ? "adicionar"
+                : windowMode === "horizon"
+                ? "lançamentos"
+                : 
               windowMode === "month"
                 ? (KINDS.find((item) => item.key === windowKind)?.title ?? "lançamentos")
                 : windowMode === "add"
@@ -1837,6 +1897,31 @@ function Index() {
                     );
                   })}
               </div>
+            )}
+
+            {horizonPicking && (
+              <div className="space-y-2">
+                {KINDS.map((k) => (
+                  <button
+                    key={k.key}
+                    type="button"
+                    onClick={() => pickKind(k.key)}
+                    className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-4 text-left transition-colors hover:bg-accent"
+                  >
+                    <span className={`text-sm font-semibold ${kindTone[k.key]}`}>{k.title}</span>
+                    <span aria-hidden className="text-muted-foreground">›</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {windowMode === "horizon" && !horizonPicking && (
+              <HorizonDayList
+                items={horizonDayItems}
+                recurrences={recurrences}
+                onEdit={(item) => editHorizonItem(item.key)}
+                onDelete={(item, scope) => deleteHorizonItem(item.key, scope)}
+              />
             )}
 
             {windowMode === "list" && (

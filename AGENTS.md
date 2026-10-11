@@ -9,5 +9,6 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Derive monthly balance reminders inside HorizonBoard from the supplied days without changing forecast data; this keeps the indicators presentation-only.
-- Reuse SectionBadge for calendar headers and tag section identifiers; derive a tag's section set from entries and recurrences without changing its totals or global rename/delete behavior.
+## Finance UI
+- Horizon day panels reuse the Calendar form and shared entry/recurrence mutations; this keeps calculations and stored records consistent across views.
+- Automatic daily forecast edits retain their budget model and use day overrides; this preserves forward recalculation and exact monthly rounding.

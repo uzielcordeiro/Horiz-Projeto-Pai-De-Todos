@@ -5,6 +5,7 @@ type Props = {
   subtitle?: string | undefined;
   dateHero?: { day: string; month: string; year: string } | undefined;
   onClose: () => void;
+  headerAction?: ReactNode;
   deleteActions?: {
     key: string;
     label: string;
@@ -25,6 +26,7 @@ export function AddWindow({
   subtitle,
   dateHero,
   onClose,
+  headerAction,
   deleteActions,
   onDeleteDay,
   onDeleteMonth,
@@ -138,6 +140,7 @@ export function AddWindow({
               </div>
             )}
           </div>
+          {headerAction}
           {hasDelete && (
             <div className="relative">
               <button

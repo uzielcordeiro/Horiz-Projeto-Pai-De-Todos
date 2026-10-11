@@ -1,5 +1,4 @@
-# Roadmap
-
-- [x] Clone & inspect github.com/uzielcordeiro/Horiz-Projeto-Pai-De-Todos (All-In-One Navigator / Saldos)
-- [x] Recreate app code/routes/styles in this project
-- [x] Verify build & preview (64/64 tests pass, preview renders)
+# Horizonte
+- [x] Abrir lista diária completa ou seletor de categoria nos dias vazios.
+- [x] Reutilizar formulários e oferecer Adicionar, editar e apagar.
+- [x] Verificar cálculos, parcelas e sincronização com o Calendário.
