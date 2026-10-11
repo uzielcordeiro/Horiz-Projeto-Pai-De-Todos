@@ -13,5 +13,7 @@
 - [x] Verificar posição, opções, desfazer e fechamento ao clicar fora.
 
 # Rolagem lateral do calendário
-- [ ] Adicionar rolagem lateral: direita avança; esquerda retorna até o mês vigente.
-- [ ] Verificar gestos, limite do mês atual e navegação existente.
+- [x] Adicionar rolagem lateral: direita avança; esquerda retorna até o mês vigente.
+- [x] Verificar gestos com mouse, rolagem horizontal e toque, limite do mês atual, navegação existente e 86 testes.
+- [x] Corrigir o sentido do trackpad e acompanhar o dedo durante o gesto sem espera inicial.
+- [x] Verificar movimento durante o gesto, alinhamento final e limite vigente com mouse, toque e trackpad.

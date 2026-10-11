@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep calendar reset controls in CalendarReset and provide an in-memory full-state restore callback from the calendar owner, so both reset scopes can be undone without changing existing storage formats.
+- Keep whole-month gesture handling in useCalendarSwipe and month boundaries in calendar-navigation, so gestures and calendar arrows share the current-month limit without changing stored financial data or date pickers.

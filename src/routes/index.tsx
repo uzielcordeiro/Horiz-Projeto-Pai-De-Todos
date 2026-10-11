@@ -16,6 +16,8 @@ import { cents } from "@/lib/money-format";
 import { monthItemLabel } from "@/lib/month-item-label";
 import { CalendarItemLabel } from "@/components/CalendarItemLabel";
 import { HorizonDayList } from "@/components/HorizonDayList";
+import { shiftCalendarMonth } from "@/lib/calendar-navigation";
+import { useCalendarSwipe } from "@/hooks/use-calendar-swipe";
 
 import { DailyForecastBoard, type ForecastItem } from "@/components/DailyForecastBoard";
 
@@ -209,6 +211,8 @@ function Index() {
   const [forecastShake, setForecastShake] = useState(0);
   const [view, setView] = useState<"saldos" | "horizonte" | "totais" | "tags" | "menu" | "diario">("saldos");
   const [horizonStart, setHorizonStart] = useState({ y: today.getFullYear(), m: today.getMonth() });
+  const canGoBack = cursor.y * 12 + cursor.m > today.getFullYear() * 12 + today.getMonth();
+  const calendarSwipeRef = useCalendarSwipe(shiftMonth, canGoBack, loaded && view === "saldos" && !adding);
 
   // previsão gasto diário (menu)
   const [forecastItems, setForecastItems] = useState<ForecastItem[]>([]);
@@ -633,10 +637,7 @@ function Index() {
 
   function shiftMonth(delta: number) {
     setSelectedDay(null);
-    setCursor((c) => {
-      const d = new Date(c.y, c.m + delta, 1);
-      return { y: d.getFullYear(), m: d.getMonth() };
-    });
+    setCursor((c) => shiftCalendarMonth(c, delta));
   }
 
   function goToday() {
@@ -1295,21 +1296,21 @@ function Index() {
                 : view}
             </h1>
             <div className={`flex shrink-0 items-center gap-1 ${view === "horizonte" || view === "menu" || view === "diario" ? "hidden" : ""}`}>
-              <button onClick={() => shiftMonth(-12)} aria-label="Ano anterior" className={navBtn}>
+              <Button variant="ghost" size="icon" disabled={!canGoBack} onClick={() => shiftMonth(-12)} aria-label="Ano anterior" className={navBtn}>
                 «
-              </button>
-              <button onClick={() => shiftMonth(-1)} aria-label="Mês anterior" className={navBtn}>
+              </Button>
+              <Button variant="ghost" size="icon" disabled={!canGoBack} onClick={() => shiftMonth(-1)} aria-label="Mês anterior" className={navBtn}>
                 ‹
-              </button>
+              </Button>
               <span className="min-w-44 rounded-full border-[1.5px] border-foreground/30 px-4 py-1.5 text-center text-sm font-medium capitalize text-foreground">
                 {monthLabel(cursor.y, cursor.m)}
               </span>
-              <button onClick={() => shiftMonth(1)} aria-label="Próximo mês" className={navBtn}>
+              <Button variant="ghost" size="icon" onClick={() => shiftMonth(1)} aria-label="Próximo mês" className={navBtn}>
                 ›
-              </button>
-              <button onClick={() => shiftMonth(12)} aria-label="Próximo ano" className={navBtn}>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => shiftMonth(12)} aria-label="Próximo ano" className={navBtn}>
                 »
-              </button>
+              </Button>
               <button
                 onClick={goToday}
                 className="ml-1 h-9 rounded-full border-[1.5px] border-foreground/30 px-3 text-xs font-bold text-foreground transition-colors hover:bg-accent"
@@ -1499,10 +1500,11 @@ function Index() {
 
 
         <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="min-w-0 flex-1">
+        <div ref={calendarSwipeRef} className="min-w-0 flex-1 touch-pan-y overflow-x-clip">
           <div className={`sticky z-20 overflow-hidden rounded-t-2xl border border-b-0 border-border bg-secondary ${isSaldos ? "top-[49px]" : "top-[61px]"}`}>
             <div
               ref={tableHeaderRef}
+              data-calendar-columns
               className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               onScroll={(event) => {
                 if (tableRef.current && tableRef.current.scrollLeft !== event.currentTarget.scrollLeft) {
@@ -1533,7 +1535,7 @@ function Index() {
 
           <section
             ref={tableRef}
-            className="min-w-0 overflow-x-auto rounded-b-2xl border border-border bg-card"
+            className="min-w-0 touch-pan-y overflow-x-auto rounded-b-2xl border border-border bg-card"
             onScroll={(event) => {
               if (tableHeaderRef.current && tableHeaderRef.current.scrollLeft !== event.currentTarget.scrollLeft) {
                 tableHeaderRef.current.scrollLeft = event.currentTarget.scrollLeft;
