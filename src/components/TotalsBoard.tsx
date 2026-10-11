@@ -1,7 +1,19 @@
 import { cents } from "@/lib/money-format";
 import type React from "react";
+import { useState } from "react";
+import { X } from "lucide-react";
 import { FitMoney } from "@/components/FitMoney";
+import { CalendarItemLabel } from "@/components/CalendarItemLabel";
+import { monthItemLabel } from "@/lib/month-item-label";
 type Kind = "entradas" | "saidas" | "diarios" | "economias" | "cartao";
+
+export type TotalsItem = {
+  date: string;
+  detail: string;
+  tags?: string[] | undefined;
+  amount: number;
+  recurrenceId?: string | undefined;
+};
 
 export type TotalsData = {
   totals: Record<Kind, number>;
@@ -65,8 +77,25 @@ function Card({
   );
 }
 
-export function TotalsBoard({ data }: { data: TotalsData }) {
+const valueTone: Record<Kind, string> = {
+  entradas: "text-positive",
+  saidas: "text-negative",
+  diarios: "text-foreground",
+  economias: "text-foreground",
+  cartao: "text-foreground",
+};
+
+export function TotalsBoard({
+  data,
+  items,
+  monthLabel,
+}: {
+  data: TotalsData;
+  items?: Record<Kind, TotalsItem[]>;
+  monthLabel?: string;
+}) {
   const { totals, diaryDays, daysInMonth, forecastPerDay } = data;
+  const [openKind, setOpenKind] = useState<Kind | null>(null);
 
   const custoVida = cents(totals.saidas + totals.diarios + totals.cartao);
   // performance = saldo final do mês (igual ao resumo do calendário): desconta também a poupança
@@ -138,7 +167,12 @@ export function TotalsBoard({ data }: { data: TotalsData }) {
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="divide-y divide-border">
             {LIST.map((l) => (
-              <div key={l.key} className="flex items-center gap-3 px-4 py-4">
+              <button
+                key={l.key}
+                type="button"
+                onClick={() => setOpenKind(l.key)}
+                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/50"
+              >
                 <Dot k={l.key} />
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                   {l.title}
@@ -146,7 +180,7 @@ export function TotalsBoard({ data }: { data: TotalsData }) {
                 <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
                   <FitMoney value={totals[l.key]} />
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -165,6 +199,83 @@ export function TotalsBoard({ data }: { data: TotalsData }) {
           </span>
         </div>
       </div>
+
+      {openKind && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4 backdrop-blur-sm"
+          onClick={() => setOpenKind(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={LIST.find((l) => l.key === openKind)!.title}
+            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-display text-2xl font-bold text-foreground">
+                  {LIST.find((l) => l.key === openKind)!.title}
+                </h3>
+                <p className="mt-0.5 text-sm text-muted-foreground">{monthLabel ?? ""}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenKind(null)}
+                aria-label="fechar"
+                className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {(items?.[openKind] ?? []).length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                nenhum lançamento neste mês
+              </p>
+            ) : (
+              (() => {
+                const list = items?.[openKind] ?? [];
+                const first = list[0];
+                // diários: quando todos os valores do mês são iguais, mostrar apenas um
+                const visible =
+                  openKind === "diarios" &&
+                  first !== undefined &&
+                  list.length > 1 &&
+                  list.every((it) => it.amount === first.amount)
+                    ? [first]
+                    : list;
+                return (
+                  <div className="space-y-3">
+                        {visible.map((it, i) => (
+                      <div
+                        key={`${it.date}-${i}`}
+                        className="rounded-2xl border border-border bg-background p-4"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          dia {Number(it.date.slice(8, 10))}
+                        </p>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <CalendarItemLabel
+                            label={monthItemLabel(it.detail, Boolean(it.recurrenceId))}
+                            kind={openKind}
+                            tags={it.tags}
+                          />
+                          <span
+                            className={`ml-auto shrink-0 text-sm font-semibold tabular-nums ${valueTone[openKind]}`}
+                          >
+                            <FitMoney value={it.amount} />
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

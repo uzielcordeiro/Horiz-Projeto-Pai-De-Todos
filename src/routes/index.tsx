@@ -499,6 +499,21 @@ function Index() {
     return { totals: monthTotals, diaryDays, daysInMonth, forecastPerDay, savedTotal };
   }, [rows, monthTotals, cursor, daysInMonth, entries, recurrences, forecastItems]);
 
+  /** Lançamentos do mês por seção, para a lista detalhada da aba totais. */
+  const totalsItems = useMemo(() => {
+    const map = {} as Record<Kind, DayItem[]>;
+    for (const k of KINDS) map[k.key] = [];
+    for (const r of rows.list) {
+      for (const it of r.items) map[it.kind]?.push(it);
+    }
+    return map;
+  }, [rows]);
+
+  const totalsMonthLabel = new Date(cursor.y, cursor.m, 1).toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
+
   /** todas as tags em uso, de todos os lançamentos e repetições (espelho do calendário) */
   const tagRows = useMemo<TagRow[]>(() => {
     const map = new Map<string, { total: number; count: number; kinds: Set<SectionKind> }>();
@@ -1394,7 +1409,7 @@ function Index() {
           />
           </>
         ) : view === "totais" && !adding ? (
-          <TotalsBoard data={totalsData} />
+          <TotalsBoard data={totalsData} items={totalsItems} monthLabel={totalsMonthLabel} />
         ) : (view === "diario" || view === "menu") && !adding ? (
           <DailyForecastBoard
             items={forecastItems}
