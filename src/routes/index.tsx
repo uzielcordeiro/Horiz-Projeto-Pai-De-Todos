@@ -1199,7 +1199,7 @@ function Index() {
     "grid size-9 shrink-0 place-items-center rounded-full border-[1.5px] border-foreground/30 text-lg font-bold leading-none text-foreground transition-colors hover:bg-accent";
 
   /** no Horizonte a página inteira vira o quadro: sem rolagem da página, tudo esticado */
-  const isHorizon = view === "horizonte" && !adding;
+  const isHorizon = view === "horizonte";
 
   /** no calendário (saldos) aproveitamos a tela como no Horizonte: laterais e topo mais justos */
   const isSaldos = view === "saldos" && !adding;
@@ -1280,7 +1280,7 @@ function Index() {
         </header>
 
       <main className={isHorizon ? "flex min-h-0 w-full flex-1 flex-col px-2 py-2 sm:px-3" : isSaldos ? "w-full space-y-4 px-2 py-2 sm:px-3" : "w-full space-y-6 px-5 py-6 sm:px-8"}>
-        {view === "horizonte" && !adding ? (
+        {view === "horizonte" ? (
           <>
           {horizonJump && (() => {
             const j = horizonJump;
@@ -1673,6 +1673,17 @@ function Index() {
 
 
 
+
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground">
+          toque em um dia para abrir o painel do dia · no + você lança em qualquer coluna e, em
+          saídas, pode nomear a dívida, parcelar (12, 48, 360…) ou deixar recorrente sem fim
+        </p>
+
+          </>
+        )}
+
         {adding && (() => {
           const windowDayRow =
             formDateParts.y === cursor.y && formDateParts.m === cursor.m
@@ -1699,7 +1710,7 @@ function Index() {
             setFormOrigin(k === "economias" ? "horizon" : "standard");
             setWindowMode(k === "diarios" ? "info" : "add");
           };
-          const editHorizonItem = (key: string) => {
+          const selectHorizonItem = (key: string) => {
             const item = horizonDayItems.find((it) => it.key === key);
             if (!item) return;
             setWindowKind(item.kind);
@@ -1711,18 +1722,8 @@ function Index() {
               setWindowMode("info");
               return;
             }
-            startFullEdit(item);
-          };
-          const deleteHorizonItem = (key: string, scope: "day" | "future" | "all") => {
-            const item = horizonDayItems.find((it) => it.key === key);
-            if (!item) return;
-            if (item.entryId) deleteItems([item]);
-            else if (item.recurrenceId === FORECAST_ID) setForecastDay(item.date, null);
-            else if (item.recurrenceId) {
-              if (scope === "day") skipOccurrence(item.recurrenceId, item.date);
-              else if (scope === "future") endRecurrenceFrom(item.recurrenceId, item.date);
-              else removeRecurrence(item.recurrenceId);
-            }
+            setActiveItemKey(item.key);
+            setWindowMode("detail");
           };
           const closeWindow = () => {
             setAdding(false);
@@ -1784,16 +1785,16 @@ function Index() {
           <AddWindow
             headerAction={
               windowMode === "horizon" && !horizonPicking ? (
-                <button
+                 <Button
                   type="button"
                   onClick={() => setWindowMode("pick")}
                   aria-label="adicionar"
                   title="adicionar"
-                  className="flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/60"
+                   className="h-9 shrink-0 gap-1 rounded-xl bg-positive px-2 text-xs font-semibold text-positive-foreground hover:bg-positive/90"
                 >
-                  <span className="w-4 shrink-0 text-center text-positive">＋</span>
+                   <span className="w-4 shrink-0 text-center">＋</span>
                   <span>adicionar</span>
-                </button>
+                 </Button>
               ) : undefined
             }
             title={
@@ -1816,7 +1817,7 @@ function Index() {
                       : "detalhes"
             }
             subtitle={
-              horizonAddWindow
+               horizonAddWindow && !(windowMode === "horizon" && !horizonPicking)
                 ? undefined
                 : windowMode === "month"
                   ? new Date(formDateParts.y, formDateParts.m, 1).toLocaleDateString("pt-BR", {
@@ -1829,7 +1830,7 @@ function Index() {
                   )
             }
             dateHero={
-              horizonAddWindow
+               horizonAddWindow && !(windowMode === "horizon" && !horizonPicking)
                 ? {
                     day: String(formDateParts.d).padStart(2, "0"),
                     month: new Date(formDateParts.y, formDateParts.m, 1).toLocaleDateString(
@@ -1918,9 +1919,7 @@ function Index() {
             {windowMode === "horizon" && !horizonPicking && (
               <HorizonDayList
                 items={horizonDayItems}
-                recurrences={recurrences}
-                onEdit={(item) => editHorizonItem(item.key)}
-                onDelete={(item, scope) => deleteHorizonItem(item.key, scope)}
+                 onSelect={(item) => selectHorizonItem(item.key)}
               />
             )}
 
@@ -2392,15 +2391,6 @@ function Index() {
           </AddWindow>
           );
         })()}
-        </div>
-
-        <p className="text-center text-xs text-muted-foreground">
-          toque em um dia para abrir o painel do dia · no + você lança em qualquer coluna e, em
-          saídas, pode nomear a dívida, parcelar (12, 48, 360…) ou deixar recorrente sem fim
-        </p>
-
-          </>
-        )}
       </main>
       </div>
     </div>
