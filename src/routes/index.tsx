@@ -201,6 +201,7 @@ function Index() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
   const [windowMode, setWindowMode] = useState<"add" | "month" | "list" | "detail" | "edit" | "info" | "horizon" | "pick">("add");
+  const [cameFromPick, setCameFromPick] = useState(false);
   const [activeItemKey, setActiveItemKey] = useState<string | null>(null);
   const [forecastSpent, setForecastSpent] = useState("");
   const [forecastConfirm, setForecastConfirm] = useState(false);
@@ -1221,6 +1222,7 @@ function Index() {
           setWindowKind("entradas");
           setEditTarget(null);
           setFormOrigin("standard");
+          setCameFromPick(false);
           setActiveItemKey(null);
           setWindowMode("add");
           setAdding(true);
@@ -1384,6 +1386,7 @@ function Index() {
               setWindowKind("economias");
               setEditTarget(null);
               setFormOrigin("horizon");
+              setCameFromPick(false);
               setActiveItemKey(null);
               setWindowMode("horizon");
               setAdding(true);
@@ -1422,6 +1425,7 @@ function Index() {
               setWindowKind("entradas");
               setEditTarget(null);
               setFormOrigin("standard");
+              setCameFromPick(false);
               setActiveItemKey(null);
               setWindowMode("add");
               setAdding(true);
@@ -1708,6 +1712,7 @@ function Index() {
             setKind(k);
             setWindowKind(k);
             setFormOrigin(k === "economias" ? "horizon" : "standard");
+            setCameFromPick(true);
             setWindowMode(k === "diarios" ? "info" : "add");
           };
           const selectHorizonItem = (key: string) => {
@@ -1727,6 +1732,7 @@ function Index() {
           };
           const closeWindow = () => {
             setAdding(false);
+            setCameFromPick(false);
             setForecastRestoring(false);
             setError(null);
             setShowCal(false);
@@ -1784,7 +1790,18 @@ function Index() {
           return (
           <AddWindow
             headerAction={
-              windowMode === "horizon" && !horizonPicking ? (
+              (windowMode === "add" || windowMode === "info") && cameFromPick ? (
+                <Button
+                  type="button"
+                  onClick={() => setWindowMode("pick")}
+                  aria-label="voltar"
+                  title="voltar"
+                  className="h-9 shrink-0 gap-1 rounded-full bg-warning px-3 text-xs font-bold text-warning-foreground shadow hover:bg-warning/90"
+                >
+                  <span aria-hidden className="w-4 shrink-0 text-center">‹</span>
+                  <span>voltar</span>
+                </Button>
+              ) : windowMode === "horizon" && !horizonPicking ? (
                  <Button
                   type="button"
                   onClick={() => setWindowMode("pick")}
