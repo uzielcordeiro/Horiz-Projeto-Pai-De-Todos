@@ -24,14 +24,12 @@ export function DailyForecastBoard({
   month,
   onSave,
   onDelete,
-  onBack,
 }: {
   items: ForecastItem[];
   year: number;
   month: number;
   onSave: (item: ForecastItem) => void;
   onDelete: (id: string) => void;
-  onBack: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -96,22 +94,9 @@ export function DailyForecastBoard({
 
   return (
     <section className="mx-auto w-full max-w-3xl space-y-4">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="voltar"
-          className="grid size-9 shrink-0 place-items-center rounded-full border border-border text-foreground transition-colors hover:bg-accent"
-        >
-          ←
-        </button>
-        <h2 className="min-w-0 flex-1 truncate font-display text-lg font-semibold text-foreground">
-          previsão gasto diário
-        </h2>
-      </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <p className="min-w-0 truncate text-sm text-muted-foreground">gastos mensais</p>
+        <p className="min-w-0 truncate text-sm text-muted-foreground">previsão de gasto diário</p>
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"

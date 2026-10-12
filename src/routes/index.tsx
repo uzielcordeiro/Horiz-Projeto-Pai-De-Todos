@@ -127,6 +127,9 @@ const iso = (y: number, m: number, d: number) =>
 const monthLabel = (y: number, m: number) =>
   new Date(y, m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
+/** só a primeira letra em maiúscula, mantendo o resto do texto igual */
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 /** Data por extenso, com "1º" no primeiro dia do mês. */
 const longDate = (isoDate: string) =>
   new Date(isoDate + "T12:00:00")
@@ -1496,11 +1499,23 @@ function Index() {
       <div className={isHorizon ? "flex h-screen min-w-0 flex-1 flex-col overflow-hidden" : "min-w-0 flex-1"}>
         <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
           <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 ${isHorizon || isSaldos ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
-            <h1 className={`truncate font-display font-semibold text-foreground ${isHorizon ? "text-lg" : "text-xl sm:text-2xl"}`}>
-              {view === "diario"
-                ? `previsão gasto diário de ${today.toLocaleDateString("pt-BR", { month: "long" })}`
-                : view}
-            </h1>
+            <div className="flex min-w-0 items-center gap-3">
+              {(view === "diario" || view === "menu") && (
+                <button
+                  type="button"
+                  onClick={() => setView("saldos")}
+                  aria-label="voltar"
+                  className="grid size-9 shrink-0 place-items-center rounded-full border border-border text-foreground transition-colors hover:bg-accent"
+                >
+                  ←
+                </button>
+              )}
+              <h1 className={`truncate font-display font-semibold text-foreground ${isHorizon ? "text-lg" : "text-xl sm:text-2xl"}`}>
+                {view === "diario" || view === "menu"
+                  ? cap(today.toLocaleDateString("pt-BR", { month: "long" }))
+                  : cap(view)}
+              </h1>
+            </div>
             <div className={`flex shrink-0 items-center gap-1 ${view === "horizonte" || view === "menu" || view === "diario" ? "hidden" : ""}`}>
               <Button variant="ghost" size="icon" disabled={!canGoBack} onClick={() => shiftMonth(-12)} aria-label="Ano anterior" className={navBtn}>
                 «
@@ -1653,7 +1668,6 @@ function Index() {
               })
             }
             onDelete={(id) => setForecastItems((prev) => prev.filter((p) => p.id !== id))}
-            onBack={() => setView("saldos")}
           />
         ) : view === "tags" && !adding ? (
           <TagsBoard
@@ -1733,7 +1747,7 @@ function Index() {
               ))}
               <span data-fit
                         className="flex min-w-0 items-center justify-end overflow-hidden border-l border-border/70 px-2">
-                saldos
+                 Saldos
               </span>
             </div>
             </div>

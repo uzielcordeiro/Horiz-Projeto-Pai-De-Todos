@@ -4,10 +4,10 @@ import { CalendarReset } from "@/components/CalendarReset";
 type Item = { key: string; label: string; icon: string; soon?: boolean };
 
 const NAV: Item[] = [
-  { key: "saldos", label: "saldos", icon: "▦" },
-  { key: "totais", label: "totais", icon: "▤" },
-  { key: "tags", label: "tags", icon: "◫" },
-  { key: "menu", label: "menu", icon: "≡" },
+  { key: "saldos", label: "Saldos", icon: "▦" },
+  { key: "totais", label: "Totais", icon: "▤" },
+  { key: "tags", label: "Tags", icon: "◫" },
+  { key: "menu", label: "Menu", icon: "≡" },
 ];
 
 export function AppSidebar({
@@ -145,7 +145,7 @@ export function AppSidebar({
           }`}
         >
           <span className="w-4 shrink-0 text-center">▩</span>
-          {open && <span className="truncate">horizonte</span>}
+          {open && <span className="truncate">Horizonte</span>}
         </button>
       </div>
 
