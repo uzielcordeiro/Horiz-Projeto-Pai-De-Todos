@@ -12,3 +12,4 @@
 - Keep calendar reset controls in CalendarReset and provide an in-memory full-state restore callback from the calendar owner, so both reset scopes can be undone without changing existing storage formats.
 - Keep whole-month gesture handling in useCalendarSwipe and month boundaries in calendar-navigation, so gestures and calendar arrows share the current-month limit without changing stored financial data or date pickers.
 - Keep tag aggregation in tag-summary, with one date/repetition detail per source and occurrence-based totals, so the Tags list can describe installment plans without changing financial storage or calendar calculations.
+- Keep Horizonte range generation and arrow bounds in calendar-navigation, so native scrolling and month/year navigation end at the same live-date boundary without changing financial storage.

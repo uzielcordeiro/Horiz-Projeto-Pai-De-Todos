@@ -17,7 +17,7 @@ import { cents } from "@/lib/money-format";
 import { monthItemLabel } from "@/lib/month-item-label";
 import { CalendarItemLabel } from "@/components/CalendarItemLabel";
 import { HorizonDayList } from "@/components/HorizonDayList";
-import { shiftCalendarMonth } from "@/lib/calendar-navigation";
+import { horizonMonthRange, shiftCalendarMonth, shiftHorizonMonth } from "@/lib/calendar-navigation";
 import { useCalendarSwipe } from "@/hooks/use-calendar-swipe";
 
 import { DailyForecastBoard, type ForecastItem } from "@/components/DailyForecastBoard";
@@ -577,10 +577,7 @@ function Index() {
   const horizonMonths = useMemo<HorizonMonth[]>(() => {
     const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
     const out: HorizonMonth[] = [];
-    for (let i = 0; i < 12; i += 1) {
-      const ref = new Date(horizonStart.y, horizonStart.m + i, 1);
-      const y = ref.getFullYear();
-      const m = ref.getMonth();
+    for (const { y, m } of horizonMonthRange(horizonStart)) {
       const first = iso(y, m, 1);
       const total = new Date(y, m + 1, 0).getDate();
 
@@ -1445,7 +1442,7 @@ function Index() {
 
 
   const navBtn =
-    "grid size-9 shrink-0 place-items-center rounded-full border-[1.5px] border-foreground/30 text-lg font-bold leading-none text-foreground transition-colors hover:bg-accent";
+    "grid size-9 shrink-0 place-items-center rounded-full border-[1.5px] border-foreground/30 text-lg font-bold leading-none text-foreground transition-colors hover:bg-accent disabled:text-foreground/50 disabled:opacity-100";
 
   /** no Horizonte a página inteira vira o quadro: sem rolagem da página, tudo esticado */
   const isHorizon = view === "horizonte";
@@ -1498,7 +1495,7 @@ function Index() {
 
       <div className={isHorizon ? "flex h-screen min-w-0 flex-1 flex-col overflow-hidden" : "min-w-0 flex-1"}>
         <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
-          <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 ${isHorizon || isSaldos ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
+          <div className={`relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 ${isHorizon || isSaldos ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
             <div className="flex min-w-0 items-center gap-3">
               {(view === "diario" || view === "menu") && (
                 <button
@@ -1516,7 +1513,22 @@ function Index() {
                   : cap(view)}
               </h1>
             </div>
-            <div className={`flex shrink-0 items-center gap-1 ${view === "horizonte" || view === "menu" || view === "diario" ? "hidden" : ""}`}>
+            {isHorizon && (
+              <div
+                aria-label="Legenda dos marcadores do Horizonte"
+                className="pointer-events-none absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center gap-6 text-xs text-muted-foreground sm:gap-8"
+              >
+                <span className="flex items-center gap-2 whitespace-nowrap">
+                  <span aria-hidden className="horizon-reminder horizon-reminder-negative" />
+                  Dia da maior dívida
+                </span>
+                <span className="flex items-center gap-2 whitespace-nowrap">
+                  <span aria-hidden className="horizon-reminder horizon-reminder-positive" />
+                  Dia do maior saldo
+                </span>
+              </div>
+            )}
+            <div className={`flex shrink-0 items-center gap-2 ${view === "horizonte" || view === "menu" || view === "diario" ? "hidden" : ""}`}>
               <Button variant="ghost" size="icon" disabled={!canGoBack} onClick={() => shiftMonth(-12)} aria-label="Ano anterior" className={navBtn}>
                 «
               </Button>
@@ -1532,12 +1544,13 @@ function Index() {
               <Button variant="ghost" size="icon" onClick={() => shiftMonth(12)} aria-label="Próximo ano" className={navBtn}>
                 »
               </Button>
-              <button
+              <Button
+                variant="ghost"
                 onClick={goToday}
-                className="ml-1 h-9 rounded-full border-[1.5px] border-foreground/30 px-3 text-xs font-bold text-foreground transition-colors hover:bg-accent"
+                className="ml-1 h-9 rounded-full border-[1.5px] border-foreground/30 bg-accent/60 px-3 text-xs font-bold text-foreground transition-colors hover:bg-accent"
               >
                 hoje
-              </button>
+              </Button>
             </div>
           </div>
         </header>
@@ -1630,10 +1643,7 @@ function Index() {
             months={horizonMonths}
             todayIso={iso(today.getFullYear(), today.getMonth(), today.getDate())}
             onShift={(delta) =>
-              setHorizonStart((h) => {
-                const d = new Date(h.y, h.m + delta, 1);
-                return { y: d.getFullYear(), m: d.getMonth() };
-              })
+              setHorizonStart((h) => shiftHorizonMonth(h, delta))
             }
             onPick={(y, m, day) => {
               setHorizonHighlight(null);
@@ -1883,7 +1893,7 @@ function Index() {
                   onClick={() => setWindowMode("pick")}
                   aria-label="voltar"
                   title="voltar"
-                  className="h-9 shrink-0 gap-1 rounded-full bg-warning px-3 text-xs font-bold text-warning-foreground shadow hover:bg-warning/90"
+                  className="h-9 shrink-0 gap-1 rounded-full bg-primary px-3 text-xs font-bold text-primary-foreground shadow hover:bg-primary/90"
                 >
                   <span aria-hidden className="w-4 shrink-0 text-center">‹</span>
                   <span>voltar</span>
