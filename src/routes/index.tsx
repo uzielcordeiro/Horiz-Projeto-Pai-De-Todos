@@ -1654,7 +1654,7 @@ function Index() {
             }}
           />
           </>
-        ) : view === "totais" && !adding ? (
+        ) : view === "totais" ? (
           <TotalsBoard data={totalsData} items={totalsItems} monthLabel={totalsMonthLabel} />
         ) : (view === "diario" || view === "menu") && !adding ? (
           <DailyForecastBoard
@@ -1669,7 +1669,7 @@ function Index() {
             }
             onDelete={(id) => setForecastItems((prev) => prev.filter((p) => p.id !== id))}
           />
-        ) : view === "tags" && !adding ? (
+        ) : view === "tags" ? (
           <TagsBoard
             rows={tagRows}
             onRename={renameTag}
@@ -1680,6 +1680,7 @@ function Index() {
               setShowCal(false);
               const sameMonth = cursor.y === today.getFullYear() && cursor.m === today.getMonth();
               const day = sameMonth ? today.getDate() : 1;
+              setSelectedDay(day);
               setFormDate(iso(cursor.y, cursor.m, day));
               setKind("entradas");
               setWindowKind("entradas");
@@ -1687,7 +1688,7 @@ function Index() {
               setFormOrigin("standard");
               setCameFromPick(false);
               setActiveItemKey(null);
-              setWindowMode("add");
+              setWindowMode("pick");
               setAdding(true);
             }}
           />

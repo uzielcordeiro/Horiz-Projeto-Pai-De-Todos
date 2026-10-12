@@ -71,14 +71,16 @@ export function TagsBoard({
             className="h-10 w-full min-w-0 rounded-xl border border-transparent bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
           />
         </label>
-        <button
+        <Button
           type="button"
           onClick={onAdd}
-          aria-label="criar tag em um lançamento"
-          className="grid size-10 shrink-0 place-items-center rounded-full border border-border text-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          aria-label="adicionar"
+          title="adicionar"
+          className="h-9 shrink-0 gap-1 rounded-xl bg-positive px-2 text-xs font-semibold text-positive-foreground hover:bg-positive/90"
         >
-          ⊕
-        </button>
+          <span className="w-4 shrink-0 text-center">＋</span>
+          <span>adicionar</span>
+        </Button>
       </div>
 
       {list.length === 0 ? (
@@ -114,7 +116,7 @@ export function TagsBoard({
                    <span className="block space-y-1 text-xs font-normal text-muted-foreground">
                      {r.details.map((detail, index) => (
                        <span key={`${detail.date}-${index}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 tabular-nums">
-                         <time dateTime={detail.date}>{detail.date.slice(8, 10)}/{detail.date.slice(5, 7)}</time>
+                         <time dateTime={detail.date}>Dia {detail.date.slice(8, 10)}/{["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"][Number(detail.date.slice(5, 7)) - 1]}</time>
                          <span aria-hidden>{" · "}</span>
                          <span>{detail.installments != null ? `1/${detail.installments} lançamentos` : "não repete"}</span>
                        </span>
