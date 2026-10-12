@@ -1,3 +1,4 @@
+import { submitOnEnter, submitFormOnEnter } from "@/lib/enter-submit";
 import { FitMoney } from "@/components/FitMoney";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Button } from "@/components/ui/button";
@@ -2128,7 +2129,7 @@ function Index() {
                               {saveTop && saveBtn}
                             </div>
                             {(
-                              <div className="flex gap-2">
+                              <div className="flex gap-2" onKeyDown={submitOnEnter(save)}>
                                 <div
                                   key={forecastShake}
                                   className={`flex h-10 min-w-0 flex-1 items-center gap-1 rounded-xl border bg-background px-3 ${
@@ -2273,7 +2274,7 @@ function Index() {
             )}
 
             {(windowMode === "add" || windowMode === "edit") && (
-            <form onSubmit={saveEntry} className="space-y-3">
+            <form onSubmit={saveEntry} onKeyDown={submitFormOnEnter} className="space-y-3">
               {/* valor */}
               <div className="rounded-2xl bg-card p-4">
                 <span className="text-xs font-medium text-muted-foreground">
@@ -2466,7 +2467,7 @@ function Index() {
                     maxLength={24}
                     onChange={(ev) => setTagInput(ev.target.value)}
                     onKeyDown={(ev) => {
-                      if (ev.key === "Enter" || ev.key === ",") {
+                      if (ev.key === ",") {
                         ev.preventDefault();
                         addTag(tagInput);
                       }
@@ -2474,7 +2475,7 @@ function Index() {
                     placeholder="ex.: extra, fixo, carro"
                     className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
                   />
-                  <button type="button" onClick={() => addTag(tagInput)} className={`${chip(false)} !h-10 !w-10 shrink-0 !rounded-xl !px-0 !text-sm`}>
+                  <button type="button" tabIndex={-1} aria-label="adicionar tag" onClick={() => addTag(tagInput)} className={`${chip(false)} !h-10 !w-10 shrink-0 !rounded-xl !px-0 !text-sm`}>
                     ＋
                   </button>
                 </div>

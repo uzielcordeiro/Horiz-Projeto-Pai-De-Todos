@@ -29,9 +29,9 @@ describe("Tag section identifiers", () => {
     const row = screen.getByRole("button", { name: "editar tag fixo" });
     expect(within(row).getByRole("img", { name: "entradas" })).toHaveTextContent("E");
     expect(within(row).getByRole("img", { name: "saídas" })).toHaveTextContent("S");
-    expect(row).toHaveTextContent("11/10");
+    expect(row).toHaveTextContent("Dia 11/Out");
     expect(row).toHaveTextContent("1/12 lançamentos");
-    expect(screen.getByRole("button", { name: "editar tag reserva" })).toHaveTextContent("12/10 · não repete");
+    expect(screen.getByRole("button", { name: "editar tag reserva" })).toHaveTextContent("Dia 12/Out · não repete");
     fireEvent.change(screen.getByPlaceholderText("filtrar tags"), { target: { value: "fixo" } });
     expect(screen.queryByRole("button", { name: "editar tag reserva" })).not.toBeInTheDocument();
     fireEvent.click(row);
@@ -46,7 +46,7 @@ describe("Tag section identifiers", () => {
     const rows = summarizeTags([], [recurrence], "2026-10-31");
     expect(rows[0]).toMatchObject({ total: 1200, count: 12, kinds: [kind], details: [{ date: "2026-10-11", installments: 12, recurring: true }] });
     render(<TagsBoard rows={rows} onAdd={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "editar tag salário" })).toHaveTextContent("11/10 · 1/12 lançamentos");
+    expect(screen.getByRole("button", { name: "editar tag salário" })).toHaveTextContent("Dia 11/Out · 1/12 lançamentos");
   });
 
   it("keeps distinct dates and installment plans on a shared tag", () => {
@@ -59,12 +59,12 @@ describe("Tag section identifiers", () => {
     expect(rows[0]?.details).toHaveLength(2);
     render(<TagsBoard rows={rows} onAdd={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />);
     const row = screen.getByRole("button", { name: "editar tag casa" });
-    expect(row).toHaveTextContent("11/10 · não repete");
-    expect(row).toHaveTextContent("15/10 · 1/6 lançamentos");
+    expect(row).toHaveTextContent("Dia 11/Out · não repete");
+    expect(row).toHaveTextContent("Dia 15/Out · 1/6 lançamentos");
   });
 
   it("uses the requested label whenever no installment count is set", () => {
     render(<TagsBoard rows={[{ tag: "fixo", total: 100, count: 1, kinds: ["entradas"], details: [{ date: "2026-10-11", installments: null, recurring: true }] }]} onAdd={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "editar tag fixo" })).toHaveTextContent("11/10 · não repete");
+    expect(screen.getByRole("button", { name: "editar tag fixo" })).toHaveTextContent("Dia 11/Out · não repete");
   });
 });

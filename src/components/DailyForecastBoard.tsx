@@ -1,3 +1,4 @@
+import { submitOnEnter } from "@/lib/enter-submit";
 import { FitMoney } from "@/components/FitMoney";
 import { MoneyInput } from "@/components/MoneyInput";
 import { dailyBudgetAmount } from "@/lib/recurrence";
@@ -83,7 +84,7 @@ export function DailyForecastBoard({
       name: name.trim(),
       amount: value,
       period,
-      tags,
+      tags: (() => { const t = tagInput.trim().replace(/^#/, "").toLowerCase(); return t && !tags.includes(t) ? [...tags, t] : tags; })(),
       ...(weeks ? { weeks } : {}),
     });
     setOpen(false);
@@ -213,7 +214,7 @@ export function DailyForecastBoard({
           onClose={() => setOpen(false)}
           onDeleteItem={editing ? () => onDelete(editing.id) : undefined}
         >
-          <div className="space-y-3">
+          <div className="space-y-3" onKeyDown={submitOnEnter(submit)}>
             <label className="block space-y-1">
               <span className="text-xs text-muted-foreground">nome</span>
               <input
@@ -274,7 +275,7 @@ export function DailyForecastBoard({
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === ",") {
                       e.preventDefault();
                       addTag();
                     }
@@ -284,6 +285,8 @@ export function DailyForecastBoard({
                 />
                 <button
                   type="button"
+                  tabIndex={-1}
+                  aria-label="adicionar tag"
                   onClick={addTag}
                   className="h-11 shrink-0 rounded-xl border border-border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >

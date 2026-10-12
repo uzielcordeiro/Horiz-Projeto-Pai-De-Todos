@@ -161,7 +161,7 @@ export function TagsBoard({
                   setError(null);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") save();
+                  if (e.key === "Enter") { e.preventDefault(); save(); }
                 }}
                 placeholder="nome da tag"
                 autoFocus
