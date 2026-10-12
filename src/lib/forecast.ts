@@ -1,4 +1,7 @@
 import { cents } from "./money-format";
+
+/** Strict 2-decimal rounding for long-range projection sums. */
+export const roundMoney = (value: number): number => cents(value);
 export type ForecastLike = { amount: number; period: "mensal" | "semanal"; weeks?: number };
 
 const WORDS: Record<string, number> = {

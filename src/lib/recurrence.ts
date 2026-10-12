@@ -276,3 +276,10 @@ export const WEEKDAYS = [
   { value: 5, short: "sex" },
   { value: 6, short: "sáb" },
 ];
+
+/** Day before a YYYY-MM-DD date, computed from local parts so no timezone shift can occur. */
+export function dayBefore(isoDate: string): string {
+  const [y = 1970, m = 1, d = 1] = isoDate.split("-").map(Number);
+  const t = new Date(y, m - 1, d - 1);
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+}

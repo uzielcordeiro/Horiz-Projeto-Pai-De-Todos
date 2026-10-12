@@ -1,4 +1,4 @@
-# The Grand Blueprint
+# The Parent Project Hub
 
 https://github.com/uzielcordeiro/Horiz-Projeto-Pai-De-Todos
 recriar aqui
@@ -7,7 +7,7 @@ This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/5aaf961e-29e5-4c18-ad1e-7df83259644c).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/9f7fa080-1963-4399-83a6-1ed4ef3bbda9).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.

@@ -32,6 +32,7 @@ import {
   sumBefore,
   type Occurrence,
   type Recurrence,
+  dayBefore,
 } from "@/lib/recurrence";
 
 export const Route = createFileRoute("/")({
@@ -642,6 +643,8 @@ function Index() {
 
   function shiftMonth(delta: number) {
     setSelectedDay(null);
+    resetForm();
+    setAdding(false);
     setCursor((c) => shiftCalendarMonth(c, delta));
   }
 
@@ -664,6 +667,9 @@ function Index() {
 
   function shiftDay(delta: number) {
     if (selectedDay == null) return;
+    // Typed but unsaved values must never carry over to another day.
+    resetForm();
+    setAdding(false);
     const d = new Date(cursor.y, cursor.m, selectedDay + delta);
     setCursor({ y: d.getFullYear(), m: d.getMonth() });
     setSelectedDay(d.getDate());
@@ -1248,9 +1254,7 @@ function Index() {
   }
 
   function endRecurrenceFrom(recurrenceId: string, date: string) {
-    const before = new Date(date);
-    before.setDate(before.getDate() - 1);
-    const end = iso(before.getFullYear(), before.getMonth(), before.getDate());
+    const end = dayBefore(date);
     commit(
       entries,
       recurrences.flatMap((r) =>
@@ -1833,8 +1837,8 @@ function Index() {
             setForecastRestoring(false);
             setError(null);
             setShowCal(false);
-            setEditTarget(null);
             setActiveItemKey(null);
+            resetForm();
           };
           const detailDeleteActions = activeItem
             ? activeItem.recurrenceId
