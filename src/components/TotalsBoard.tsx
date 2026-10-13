@@ -66,7 +66,7 @@ function Card({
   tone?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="raise-soft rounded-2xl border border-border bg-card p-5">
       <h3 className="font-display text-lg font-semibold text-foreground">{title}</h3>
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         {formula}

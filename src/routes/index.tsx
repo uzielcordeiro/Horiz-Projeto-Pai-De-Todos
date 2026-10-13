@@ -347,7 +347,6 @@ function Index() {
   } | null>(null);
   const [horizonHighlight, setHorizonHighlight] = useState<string | null>(null);
   /** O quadro do Horizonte é pesado: entra após o primeiro paint para o clique responder na hora. */
-  const [horizonBoardReady, setHorizonBoardReady] = useState(false);
   const [selected, setSelected] = useState<Record<string, DayItem>>({});
   const [confirmAll, setConfirmAll] = useState<"mes" | "ano" | "tudo" | null>(null);
 
@@ -1294,18 +1293,6 @@ function Index() {
     return () => cancelAnimationFrame(frame);
   }, [view, horizonHighlight, horizonStart]);
 
-  // Monta o quadro do Horizonte após o primeiro paint, para o clique responder
-  // imediatamente (a vinheta ocupa o lugar até o quadro aparecer).
-  useEffect(() => {
-    if (view !== "horizonte") {
-      setHorizonBoardReady(false);
-      return;
-    }
-    const frame = requestAnimationFrame(() =>
-      requestAnimationFrame(() => setHorizonBoardReady(true)),
-    );
-    return () => cancelAnimationFrame(frame);
-  }, [view, horizonStart]);
 
   /** aplica salvar/desfazer da janela do Horizonte */
   function applyHorizonJump(action: "save" | "undo", scope: "day" | "all") {
@@ -1650,8 +1637,7 @@ function Index() {
               </AddWindow>
             );
           })()}
-          {horizonBoardReady ? (
-            <HorizonBoard
+          <HorizonBoard
               highlightDate={horizonHighlight}
               months={horizonMonths}
               todayIso={iso(today.getFullYear(), today.getMonth(), today.getDate())}
@@ -1676,12 +1662,6 @@ function Index() {
                 setAdding(true);
               }}
             />
-          ) : (
-            <div
-              aria-hidden
-              className="flex min-h-0 min-w-0 flex-1 animate-pulse flex-col rounded-2xl border border-border bg-muted/20"
-            />
-          )}
           </>
         ) : view === "totais" ? (
           <TotalsBoard data={totalsData} items={totalsItems} monthLabel={totalsMonthLabel} />
@@ -1725,15 +1705,15 @@ function Index() {
           <>
 
         <section className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="raise-soft rounded-2xl border border-border bg-card p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">saldo anterior</p>
             <p className="mt-1 text-lg font-semibold text-foreground"><FitMoney value={rows.opening} /></p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="raise-soft rounded-2xl border border-border bg-card p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">entradas do mês</p>
             <p className="mt-1 text-lg font-semibold text-positive"><FitMoney value={monthTotals.entradas} /></p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="raise-soft rounded-2xl border border-border bg-card p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">saldo final</p>
             <p
               className={`mt-1 flex items-center gap-2 text-lg font-semibold ${

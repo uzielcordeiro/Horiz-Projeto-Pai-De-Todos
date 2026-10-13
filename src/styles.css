@@ -163,10 +163,13 @@
 }
 
 :root {
-  --background: oklch(0.985 0.008 150);
+  /* Fundo nativo do sistema: cinza-lavanda claro (#ECEBF0) da referência. */
+  --background: oklch(0.94 0.006 290);
   --foreground: oklch(0.22 0.03 160);
-  --card: oklch(1 0 0);
+  --card: oklch(0.94 0.006 290);
   --card-foreground: oklch(0.22 0.03 160);
+  --popover: oklch(0.94 0.006 290);
+  --sidebar: oklch(0.908 0.004 286);
   --primary: oklch(0.45 0.11 163);
   --primary-foreground: oklch(0.985 0.01 150);
   --secondary: oklch(0.95 0.02 160);
@@ -175,8 +178,8 @@
   --muted-foreground: oklch(0.52 0.03 160);
   --accent: oklch(0.93 0.04 160);
   --accent-foreground: oklch(0.28 0.05 160);
-  --border: oklch(0.9 0.015 160);
-  --input: oklch(0.9 0.015 160);
+  --border: oklch(0.84 0.008 290);
+  --input: oklch(0.84 0.008 290);
   --ring: oklch(0.55 0.1 163);
   --radius: 0.9rem;
 
@@ -271,5 +274,14 @@
 }
 @utility animate-shake {
   animation: shake 0.35s ease-in-out;
+}
+
+/* Relevo 3D bem sutil (neumórfico leve): sombra suave embaixo + brilho claro no
+   topo-esquerda. Intencionalmente discreto para não brigar com o clima do app. */
+@utility raise-soft {
+  box-shadow:
+    -1px -1px 1px 0 oklch(1 0 0 / 0.85),
+    1px 1px 2px 0 oklch(0.6 0.01 290 / 0.08),
+    0 8px 16px -10px oklch(0.4 0.02 290 / 0.22);
 }
 

@@ -1,5 +1,5 @@
 import { FitMoney } from "@/components/FitMoney";
-import { memo, useRef } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
 type Status = "surplus" | "positive" | "warning" | "negative" | "negativeDeep";
 
@@ -51,10 +51,22 @@ type ColumnProps = {
   todayIso: string;
   highlightDate?: string | null | undefined;
   onPick: (y: number, m: number, day: number) => void;
+  /** Última coluna não desenha o tracinho vertical na borda externa. */
+  last?: boolean;
 };
 
+/** Tracinho vertical curto entre colunas: não encosta na linha de cima nem na de baixo. */
+function ColumnTick() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute right-0 top-1/2 h-[18px] w-px -translate-y-1/2 bg-border/70"
+    />
+  );
+}
+
 /** Coluna de um mês: marcadores calculados uma vez por mês, não por célula. */
-const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlightDate, onPick }: ColumnProps) {
+const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlightDate, onPick, last }: ColumnProps) {
   const lowest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
     !best || day.balance < best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
   undefined);
@@ -63,20 +75,25 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
   undefined);
 
   return (
-    <div className="w-40 shrink-0 border-r border-border last:border-r-0">
+    <div className="w-40 shrink-0">
       <button
         type="button"
         onClick={() => onPick(mo.y, mo.m, 1)}
-        className="sticky top-0 z-10 block w-full border-b border-border bg-secondary px-3 py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+        className="sticky top-0 z-10 relative block w-full border-b border-border bg-secondary px-3 py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-accent"
       >
         {mo.label}
+        {!last && <ColumnTick />}
       </button>
       <div className="divide-y divide-border">
 
         {Array.from({ length: maxDays }, (_, i) => {
           const d = mo.days[i];
           if (!d)
-            return <div key={i} className="h-8 bg-muted/20" aria-hidden />;
+            return (
+              <div key={i} className="relative h-8 bg-muted/20" aria-hidden>
+                {!last && <ColumnTick />}
+              </div>
+            );
           const reminder = d.date === lowest?.date && d.balance <= -1000
             ? "negative"
             : d.date === highest?.date && d.balance > 2000 ? "positive" : undefined;
@@ -88,7 +105,7 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
               data-horizon-day={d.date}
               data-horizon-highlighted={d.date === highlightDate ? "true" : undefined}
               onClick={() => onPick(mo.y, mo.m, d.day)}
-              className={`grid h-8 w-full grid-cols-[34px_minmax(0,1fr)] items-center text-xs transition-opacity hover:opacity-80 ${cell[d.status]} ${
+              className={`relative grid h-8 w-full grid-cols-[34px_minmax(0,1fr)] items-center text-xs transition-opacity hover:opacity-80 ${cell[d.status]} ${
                 isToday ? "border-b-2 border-foreground" : ""
               } ${d.date === highlightDate ? "horizon-cut-marker" : ""}`}
             >
@@ -112,6 +129,7 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
                 </span>
                 <span data-fit className="min-w-0"><FitMoney value={d.balance} symbol={false} /></span>
               </span>
+              {!last && <ColumnTick />}
             </button>
           );
         })}
@@ -120,14 +138,46 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
   );
 });
 
+/** Largura fixa de cada coluna (w-40) — base para desenhar só as colunas visíveis. */
+const COLUMN_WIDTH = 160;
+/** Colunas extras desenhadas além da área visível, para a rolagem não mostrar buracos. */
+const OVERSCAN = 3;
+/** Colunas desenhadas no primeiro quadro, antes de medir a tela (cobre telas largas). */
+const INITIAL_COLUMNS = 12;
+
 export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const [range, setRange] = useState({ from: 0, to: INITIAL_COLUMNS });
   const nav =
     "grid size-9 shrink-0 place-items-center rounded-full border-2 border-foreground text-foreground transition-colors hover:bg-accent";
   /** verde-escuro enquanto aperta a seta de mês, vermelho enquanto aperta a seta de ano */
   const navMonth = `${nav} active:bg-surplus`;
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
+
+  // Desenha apenas as colunas na área visível (mais uma folga). Com ~60 meses
+  // no quadro, desenhar tudo de uma vez travava o clique no menu lateral.
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const update = () => {
+      const width = el.clientWidth || INITIAL_COLUMNS * COLUMN_WIDTH;
+      const from = Math.max(0, Math.floor(el.scrollLeft / COLUMN_WIDTH) - OVERSCAN);
+      const to = Math.ceil((el.scrollLeft + width) / COLUMN_WIDTH) + OVERSCAN;
+      setRange((r) => (r.from === from && r.to === to ? r : { from, to }));
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro?.disconnect();
+    };
+  }, [months.length]);
+
+  const from = Math.min(range.from, months.length);
+  const to = Math.min(range.to, months.length);
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -162,7 +212,8 @@ export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate 
           className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl"
         >
           <div className="flex min-w-max">
-            {months.map((mo) => (
+            {from > 0 && <div aria-hidden className="shrink-0" style={{ width: from * COLUMN_WIDTH }} />}
+            {months.slice(from, to).map((mo, i) => (
               <MonthColumn
                 key={`${mo.y}-${mo.m}`}
                 mo={mo}
@@ -170,8 +221,12 @@ export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate 
                 todayIso={todayIso}
                 highlightDate={highlightDate}
                 onPick={onPick}
+                last={from + i === months.length - 1}
               />
             ))}
+            {to < months.length && (
+              <div aria-hidden className="shrink-0" style={{ width: (months.length - to) * COLUMN_WIDTH }} />
+            )}
           </div>
         </div>
       </div>
