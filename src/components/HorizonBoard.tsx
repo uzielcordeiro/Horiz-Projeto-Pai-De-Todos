@@ -1,5 +1,5 @@
 import { FitMoney } from "@/components/FitMoney";
-import { useRef } from "react";
+import { memo, useRef } from "react";
 
 type Status = "surplus" | "positive" | "warning" | "negative" | "negativeDeep";
 
@@ -45,6 +45,81 @@ type Props = {
   highlightDate?: string | null;
 };
 
+type ColumnProps = {
+  mo: HorizonMonth;
+  maxDays: number;
+  todayIso: string;
+  highlightDate?: string | null | undefined;
+  onPick: (y: number, m: number, day: number) => void;
+};
+
+/** Coluna de um mês: marcadores calculados uma vez por mês, não por célula. */
+const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlightDate, onPick }: ColumnProps) {
+  const lowest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
+    !best || day.balance < best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
+  undefined);
+  const highest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
+    !best || day.balance > best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
+  undefined);
+
+  return (
+    <div className="w-40 shrink-0 border-r border-border last:border-r-0">
+      <button
+        type="button"
+        onClick={() => onPick(mo.y, mo.m, 1)}
+        className="sticky top-0 z-10 block w-full border-b border-border bg-secondary px-3 py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+      >
+        {mo.label}
+      </button>
+      <div className="divide-y divide-border">
+
+        {Array.from({ length: maxDays }, (_, i) => {
+          const d = mo.days[i];
+          if (!d)
+            return <div key={i} className="h-8 bg-muted/20" aria-hidden />;
+          const reminder = d.date === lowest?.date && d.balance <= -1000
+            ? "negative"
+            : d.date === highest?.date && d.balance > 2000 ? "positive" : undefined;
+          const isToday = d.date === todayIso;
+          return (
+            <button
+              key={d.date}
+              type="button"
+              data-horizon-day={d.date}
+              data-horizon-highlighted={d.date === highlightDate ? "true" : undefined}
+              onClick={() => onPick(mo.y, mo.m, d.day)}
+              className={`grid h-8 w-full grid-cols-[34px_minmax(0,1fr)] items-center text-xs transition-opacity hover:opacity-80 ${cell[d.status]} ${
+                isToday ? "border-b-2 border-foreground" : ""
+              } ${d.date === highlightDate ? "horizon-cut-marker" : ""}`}
+            >
+              <span
+                className={`h-full grid place-items-center bg-background/60 tabular-nums ${
+                  isToday ? "font-bold text-foreground" : "text-muted-foreground"
+                } ${d.date === highlightDate ? "font-bold text-foreground" : ""}`}
+              >
+                {d.day}
+              </span>
+              <span className={`grid min-w-0 grid-cols-[16px_minmax(0,1fr)] items-center gap-1 px-1.5 text-right tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
+                <span className="grid size-4 place-items-center">
+                  {reminder && (
+                    <span
+                      role="img"
+                      aria-label={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
+                      title={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
+                      className={`horizon-reminder horizon-reminder-${reminder}`}
+                    />
+                  )}
+                </span>
+                <span data-fit className="min-w-0"><FitMoney value={d.balance} symbol={false} /></span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
 export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const nav =
@@ -88,66 +163,14 @@ export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate 
         >
           <div className="flex min-w-max">
             {months.map((mo) => (
-              <div key={`${mo.y}-${mo.m}`} className="w-40 shrink-0 border-r border-border last:border-r-0">
-                <button
-                  type="button"
-                  onClick={() => onPick(mo.y, mo.m, 1)}
-                  className="sticky top-0 z-10 block w-full border-b border-border bg-secondary px-3 py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-accent"
-                >
-                  {mo.label}
-                </button>
-                <div className="divide-y divide-border">
-
-                  {Array.from({ length: maxDays }, (_, i) => {
-                    const d = mo.days[i];
-                    if (!d)
-                      return <div key={i} className="h-8 bg-muted/20" aria-hidden />;
-                    const lowest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
-                      !best || day.balance < best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
-                    undefined);
-                    const highest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
-                      !best || day.balance > best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
-                    undefined);
-                    const reminder = d.date === lowest?.date && d.balance <= -1000
-                      ? "negative"
-                      : d.date === highest?.date && d.balance > 2000 ? "positive" : undefined;
-                    const isToday = d.date === todayIso;
-                    return (
-                      <button
-                        key={d.date}
-                        type="button"
-                        data-horizon-day={d.date}
-                        data-horizon-highlighted={d.date === highlightDate ? "true" : undefined}
-                        onClick={() => onPick(mo.y, mo.m, d.day)}
-                        className={`grid h-8 w-full grid-cols-[34px_minmax(0,1fr)] items-center text-xs transition-opacity hover:opacity-80 ${cell[d.status]} ${
-                          isToday ? "border-b-2 border-foreground" : ""
-                        } ${d.date === highlightDate ? "horizon-cut-marker" : ""}`}
-                      >
-                        <span
-                          className={`h-full grid place-items-center bg-background/60 tabular-nums ${
-                            isToday ? "font-bold text-foreground" : "text-muted-foreground"
-                          } ${d.date === highlightDate ? "font-bold text-foreground" : ""}`}
-                        >
-                          {d.day}
-                        </span>
-                        <span className={`grid min-w-0 grid-cols-[16px_minmax(0,1fr)] items-center gap-1 px-1.5 text-right tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
-                          <span className="grid size-4 place-items-center">
-                            {reminder && (
-                              <span
-                                role="img"
-                                aria-label={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
-                                title={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
-                                className={`horizon-reminder horizon-reminder-${reminder}`}
-                              />
-                            )}
-                          </span>
-                          <span data-fit className="min-w-0"><FitMoney value={d.balance} symbol={false} /></span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <MonthColumn
+                key={`${mo.y}-${mo.m}`}
+                mo={mo}
+                maxDays={maxDays}
+                todayIso={todayIso}
+                highlightDate={highlightDate}
+                onPick={onPick}
+              />
             ))}
           </div>
         </div>

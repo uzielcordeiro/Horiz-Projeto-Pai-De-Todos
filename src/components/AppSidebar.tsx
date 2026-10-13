@@ -1,13 +1,14 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { Menu as MenuIcon, List, Map as MapIcon, Plus, Tag, Target, Wallet, Table2 } from "lucide-react";
 import { CalendarReset } from "@/components/CalendarReset";
 
-type Item = { key: string; label: string; icon: string; soon?: boolean };
+type Item = { key: string; label: string; icon: React.ReactNode; soon?: boolean };
 
 const NAV: Item[] = [
-  { key: "saldos", label: "Saldos", icon: "▦" },
-  { key: "totais", label: "Totais", icon: "▤" },
-  { key: "tags", label: "Tags", icon: "◫" },
-  { key: "menu", label: "Menu", icon: "≡" },
+  { key: "saldos", label: "Saldos", icon: <Wallet size={16} strokeWidth={2} /> },
+  { key: "totais", label: "Totais", icon: <Table2 size={16} strokeWidth={2} /> },
+  { key: "tags", label: "Tags", icon: <Tag size={16} strokeWidth={2} /> },
+  { key: "menu", label: "Menu", icon: <List size={16} strokeWidth={2} /> },
 ];
 
 export function AppSidebar({
@@ -74,7 +75,7 @@ export function AppSidebar({
           title={open ? "recolher menu" : "expandir menu"}
           className="grid size-8 shrink-0 place-items-center rounded-lg text-base text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          ☰
+          <MenuIcon size={16} strokeWidth={2} />
         </button>
         {open && (
           <span className="truncate font-display text-sm font-semibold text-foreground">
@@ -100,7 +101,7 @@ export function AppSidebar({
                 : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             } disabled:cursor-not-allowed disabled:opacity-45`}
           >
-            <span className="w-4 shrink-0 text-center">{item.icon}</span>
+            <span className="flex w-4 shrink-0 justify-center">{item.icon}</span>
             {open && <span className="truncate">{item.label}</span>}
           </button>
         ))}
@@ -116,7 +117,7 @@ export function AppSidebar({
           title="adicionar"
           className={`${row} text-foreground hover:bg-accent/60`}
         >
-          <span className="w-4 shrink-0 text-center text-positive">＋</span>
+          <span className="flex w-4 shrink-0 justify-center"><Plus size={16} strokeWidth={2} /></span>
           {open && <span className="truncate">adicionar</span>}
         </button>
         <button
@@ -128,7 +129,7 @@ export function AppSidebar({
           title="ir pra hoje"
           className={`${row} text-muted-foreground hover:bg-accent/60 hover:text-foreground`}
         >
-          <span className="w-4 shrink-0 text-center">◉</span>
+          <span className="flex w-4 shrink-0 justify-center"><Target size={16} strokeWidth={2} /></span>
           {open && <span className="truncate">ir pra hoje</span>}
         </button>
         <button
@@ -144,7 +145,7 @@ export function AppSidebar({
               : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
           }`}
         >
-          <span className="w-4 shrink-0 text-center">▩</span>
+          <span className="flex w-4 shrink-0 justify-center"><MapIcon size={16} strokeWidth={2} /></span>
           {open && <span className="truncate">Horizonte</span>}
         </button>
       </div>

@@ -346,6 +346,8 @@ function Index() {
     error: string | null;
   } | null>(null);
   const [horizonHighlight, setHorizonHighlight] = useState<string | null>(null);
+  /** O quadro do Horizonte é pesado: entra após o primeiro paint para o clique responder na hora. */
+  const [horizonBoardReady, setHorizonBoardReady] = useState(false);
   const [selected, setSelected] = useState<Record<string, DayItem>>({});
   const [confirmAll, setConfirmAll] = useState<"mes" | "ano" | "tudo" | null>(null);
 
@@ -578,50 +580,42 @@ function Index() {
 
   const horizonMonths = useMemo<HorizonMonth[]>(() => {
     const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-    const out: HorizonMonth[] = [];
-    for (const { y, m } of horizonMonthRange(horizonStart)) {
-      const first = iso(y, m, 1);
-      const total = new Date(y, m + 1, 0).getDate();
+    const range = horizonMonthRange(horizonStart);
+    if (range.length === 0) return [];
+    const first = iso(range[0]!.y, range[0]!.m, 1);
 
-      // saldo de abertura do mês
-      let running =
-        sorted
-          .filter((e) => e.date < first)
-          .reduce(
-            (sum, e) => cents(sum + balanceSign(e.kind, e.horizonTransfer) * e.amount),
-            0,
-          ) +
-        recurrences.reduce((s, r) => {
-          const k = KINDS.find((x) => x.key === r.kind);
-          if (!k) return s;
-          return cents(s + balanceSign(r.kind as Kind, r.horizonTransfer) * sumBefore(r, first));
-        }, 0);
-
-      const byDate = new Map<string, number>();
-      for (const e of sorted) {
-        if (e.date >= first) {
-          const k = KINDS.find((x) => x.key === e.kind);
-          if (k) {
-            byDate.set(
-              e.date,
-              cents((byDate.get(e.date) ?? 0) + balanceSign(e.kind, e.horizonTransfer) * e.amount),
-            );
-          }
-        }
+    // Uma única passada: saldo antes do horizonte vira abertura,
+    // o resto é acumulado por data para todo o intervalo de uma vez.
+    let opening = 0;
+    const byDate = new Map<string, number>();
+    for (const e of sorted) {
+      const sign = balanceSign(e.kind, e.horizonTransfer);
+      if (e.date < first) {
+        opening = cents(opening + sign * e.amount);
+      } else {
+        const k = KINDS.find((x) => x.key === e.kind);
+        if (k) byDate.set(e.date, cents((byDate.get(e.date) ?? 0) + sign * e.amount));
       }
-      for (const r of recurrences) {
+    }
+    for (const r of recurrences) {
+      const k = KINDS.find((x) => x.key === r.kind);
+      if (!k) continue;
+      const sign = balanceSign(r.kind as Kind, r.horizonTransfer);
+      opening = cents(opening + sign * sumBefore(r, first));
+      for (const { y, m } of range) {
         for (const o of occurrencesInMonth(r, y, m)) {
-          const k = KINDS.find((x) => x.key === o.kind);
-          if (k) {
-            byDate.set(
-              o.date,
-              cents((byDate.get(o.date) ?? 0) +
-                balanceSign(o.kind as Kind, o.horizonTransfer) * o.amount),
-            );
-          }
+          byDate.set(
+            o.date,
+            cents((byDate.get(o.date) ?? 0) + balanceSign(o.kind as Kind, o.horizonTransfer) * o.amount),
+          );
         }
       }
+    }
 
+    const out: HorizonMonth[] = [];
+    let running = opening;
+    for (const { y, m } of range) {
+      const total = new Date(y, m + 1, 0).getDate();
       const days = Array.from({ length: total }, (_, idx) => {
         const day = idx + 1;
         const date = iso(y, m, day);
@@ -1300,6 +1294,19 @@ function Index() {
     return () => cancelAnimationFrame(frame);
   }, [view, horizonHighlight, horizonStart]);
 
+  // Monta o quadro do Horizonte após o primeiro paint, para o clique responder
+  // imediatamente (a vinheta ocupa o lugar até o quadro aparecer).
+  useEffect(() => {
+    if (view !== "horizonte") {
+      setHorizonBoardReady(false);
+      return;
+    }
+    const frame = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setHorizonBoardReady(true)),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [view, horizonStart]);
+
   /** aplica salvar/desfazer da janela do Horizonte */
   function applyHorizonJump(action: "save" | "undo", scope: "day" | "all") {
     if (!horizonJump) return;
@@ -1643,31 +1650,38 @@ function Index() {
               </AddWindow>
             );
           })()}
-          <HorizonBoard
-            highlightDate={horizonHighlight}
-            months={horizonMonths}
-            todayIso={iso(today.getFullYear(), today.getMonth(), today.getDate())}
-            onShift={(delta) =>
-              setHorizonStart((h) => shiftHorizonMonth(h, delta))
-            }
-            onPick={(y, m, day) => {
-              setHorizonHighlight(null);
-              resetForm();
-              setError(null);
-              setShowCal(false);
-              setCursor({ y, m });
-              setSelectedDay(day);
-              setFormDate(iso(y, m, day));
-              setKind("economias");
-              setWindowKind("economias");
-              setEditTarget(null);
-              setFormOrigin("horizon");
-              setCameFromPick(false);
-              setActiveItemKey(null);
-              setWindowMode("horizon");
-              setAdding(true);
-            }}
-          />
+          {horizonBoardReady ? (
+            <HorizonBoard
+              highlightDate={horizonHighlight}
+              months={horizonMonths}
+              todayIso={iso(today.getFullYear(), today.getMonth(), today.getDate())}
+              onShift={(delta) =>
+                setHorizonStart((h) => shiftHorizonMonth(h, delta))
+              }
+              onPick={(y, m, day) => {
+                setHorizonHighlight(null);
+                resetForm();
+                setError(null);
+                setShowCal(false);
+                setCursor({ y, m });
+                setSelectedDay(day);
+                setFormDate(iso(y, m, day));
+                setKind("economias");
+                setWindowKind("economias");
+                setEditTarget(null);
+                setFormOrigin("horizon");
+                setCameFromPick(false);
+                setActiveItemKey(null);
+                setWindowMode("horizon");
+                setAdding(true);
+              }}
+            />
+          ) : (
+            <div
+              aria-hidden
+              className="flex min-h-0 min-w-0 flex-1 animate-pulse flex-col rounded-2xl border border-border bg-muted/20"
+            />
+          )}
           </>
         ) : view === "totais" ? (
           <TotalsBoard data={totalsData} items={totalsItems} monthLabel={totalsMonthLabel} />
