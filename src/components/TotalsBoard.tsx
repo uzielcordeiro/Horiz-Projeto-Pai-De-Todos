@@ -202,7 +202,7 @@ export function TotalsBoard({
 
       {openKind && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4 backdrop-blur-sm dark:bg-black/50 dark:backdrop-blur-[4px]"
           onClick={() => setOpenKind(null)}
         >
           <div

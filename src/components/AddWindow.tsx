@@ -102,7 +102,7 @@ export function AddWindow({
         type="button"
         aria-label="Fechar"
         onClick={onClose}
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px] dark:bg-black/50 dark:backdrop-blur-[4px]"
       />
 
       <div

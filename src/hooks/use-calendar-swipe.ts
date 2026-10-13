@@ -40,7 +40,7 @@ export function useCalendarSwipe(onShift: (delta: number) => void, canGoBack: bo
         if (!reduced && element.animate && offset !== target) {
           animation = element.animate(
             [{ transform: `translateX(${offset}px)` }, { transform: `translateX(${target}px)` }],
-            { duration: 160, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)", fill: "forwards" },
+            { duration: 120, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)", fill: "forwards" },
           );
           await animation.finished.catch(() => {});
         }
@@ -66,7 +66,9 @@ export function useCalendarSwipe(onShift: (delta: number) => void, canGoBack: bo
       locked = false;
     };
     const down = (event: PointerEvent) => {
-      if (!event.isPrimary || event.button !== 0 || locked) return;
+      if (!event.isPrimary || event.button !== 0) return;
+      // A new drag during the closing animation finishes it at once instead of being ignored.
+      if (locked) animation?.finish();
       clearTimeout(wheelTimer);
       wheelTotal = 0;
       // The header retains native horizontal column scrolling on narrow screens.
@@ -105,14 +107,62 @@ export function useCalendarSwipe(onShift: (delta: number) => void, canGoBack: bo
       event.preventDefault();
       event.stopPropagation();
     };
+    // Trackpad: commit a month as soon as the swipe passes the threshold (no waiting
+    // for the gesture to end), ignore that swipe's inertia tail, and accept the next
+    // swipe immediately when its deltas accelerate again or after a short pause.
+    let coasting = false;
+    let lastAbs = 0;
+    let lastTime = 0;
+    let coastTimer: ReturnType<typeof setTimeout> | undefined;
+    const commitWheel = (delta: number) => {
+      clearTimeout(wheelTimer);
+      wheelTotal = 0;
+      animation?.cancel();
+      flushSync(() => latest.current.onShift(delta));
+      offset = 0;
+      const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      if (!reduced && element.animate) {
+        const from = delta * 36;
+        animation = element.animate(
+          [{ transform: `translateX(${from}px)` }, { transform: "translateX(0px)" }],
+          { duration: 110, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" },
+        );
+      }
+      element.style.removeProperty("transform");
+      element.style.removeProperty("will-change");
+    };
     const wheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
       if ((event.target as HTMLElement).closest("[data-calendar-columns]")) return;
       event.preventDefault();
+      if (start) return;
+      const now = performance.now();
+      const abs = Math.abs(event.deltaX);
+      if (coasting) {
+        const fresh = now - lastTime > 45 || (abs > lastAbs + 3 && abs > lastAbs * 1.35);
+        lastAbs = abs;
+        lastTime = now;
+        clearTimeout(coastTimer);
+        if (!fresh) {
+          coastTimer = setTimeout(() => { coasting = false; }, 90);
+          return;
+        }
+        coasting = false;
+      }
+      lastAbs = abs;
+      lastTime = now;
       clearTimeout(wheelTimer);
-      if (locked || start) return;
+      if (locked) animation?.finish();
       wheelTotal += calendarWheelMovement(event.deltaX, event.deltaMode, element.clientWidth);
+      if (wheelTotal > 0 && !latest.current.canGoBack) wheelTotal = 0;
       track(wheelTotal);
+      const threshold = Math.min(120, Math.max(60, panelWidth() * 0.18));
+      if (Math.abs(wheelTotal) >= threshold) {
+        commitWheel(wheelTotal > 0 ? -1 : 1);
+        coasting = true;
+        coastTimer = setTimeout(() => { coasting = false; }, 90);
+        return;
+      }
       wheelTimer = setTimeout(() => {
         const delta = -calendarGestureDirection(wheelTotal, 0);
         wheelTotal = 0;
@@ -129,6 +179,7 @@ export function useCalendarSwipe(onShift: (delta: number) => void, canGoBack: bo
       active = false;
       animation?.cancel();
       clearTimeout(wheelTimer);
+      clearTimeout(coastTimer);
       element.style.removeProperty("transform");
       element.style.removeProperty("will-change");
       element.removeEventListener("pointerdown", down);

@@ -54,3 +54,22 @@ describe("Suivi contínuo do calendário", () => {
     expect(element.style.transform).toBe("translateX(0px)");
   });
 });
+describe("Trackpad com arrastos seguidos", () => {
+  it("troca um mês por arrasto, sem esperar o anterior terminar", () => {
+    const onShift = vi.fn();
+    const { getByTestId } = render(<Calendar onShift={onShift} />);
+    const element = getByTestId("calendar");
+    Object.defineProperty(element, "clientWidth", { value: 800 });
+    const now = vi.spyOn(performance, "now");
+    let t = 0;
+    const swipe = (deltas: number[]) => deltas.forEach((d) => { t += 16; now.mockReturnValue(t); fireEvent.wheel(element, { deltaX: d, deltaY: 0 }); });
+    swipe([30, 60, 50]); // primeiro arrasto passa do limite
+    expect(onShift).toHaveBeenCalledTimes(1);
+    swipe([30, 20, 10, 5]); // inércia do mesmo arrasto: ignorada
+    expect(onShift).toHaveBeenCalledTimes(1);
+    swipe([40, 70, 40]); // novo arrasto acelera de novo: aceito na hora
+    expect(onShift).toHaveBeenCalledTimes(2);
+    expect(onShift).toHaveBeenNthCalledWith(2, 1);
+    now.mockRestore();
+  });
+});
