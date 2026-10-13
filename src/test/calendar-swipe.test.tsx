@@ -55,21 +55,24 @@ describe("Suivi contínuo do calendário", () => {
   });
 });
 describe("Trackpad com arrastos seguidos", () => {
-  it("troca um mês por arrasto, sem esperar o anterior terminar", () => {
+  it("trava em um mês por arrasto, nos dois sentidos, e libera o próximo após uma pausa", () => {
+    vi.useFakeTimers();
     const onShift = vi.fn();
     const { getByTestId } = render(<Calendar onShift={onShift} />);
     const element = getByTestId("calendar");
     Object.defineProperty(element, "clientWidth", { value: 800 });
-    const now = vi.spyOn(performance, "now");
-    let t = 0;
-    const swipe = (deltas: number[]) => deltas.forEach((d) => { t += 16; now.mockReturnValue(t); fireEvent.wheel(element, { deltaX: d, deltaY: 0 }); });
-    swipe([30, 60, 50]); // primeiro arrasto passa do limite
+    const swipe = (deltas: number[]) => deltas.forEach((d) => fireEvent.wheel(element, { deltaX: d, deltaY: 0 }));
+    swipe([30, 60, 50]); // primeiro arrasto passa do limite: um mês
     expect(onShift).toHaveBeenCalledTimes(1);
-    swipe([30, 20, 10, 5]); // inércia do mesmo arrasto: ignorada
+    expect(onShift).toHaveBeenNthCalledWith(1, 1);
+    swipe([40, 70, 40]); // inércia do mesmo arrasto, mesmo acelerando: ignorada
     expect(onShift).toHaveBeenCalledTimes(1);
-    swipe([40, 70, 40]); // novo arrasto acelera de novo: aceito na hora
+    swipe([-80, -90]); // inércia no sentido oposto também é ignorada
+    expect(onShift).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(300); // gesto ficou quieto: próximo arrasto vale de novo
+    swipe([30, 60, 50]);
     expect(onShift).toHaveBeenCalledTimes(2);
     expect(onShift).toHaveBeenNthCalledWith(2, 1);
-    now.mockRestore();
+    vi.useRealTimers();
   });
 });

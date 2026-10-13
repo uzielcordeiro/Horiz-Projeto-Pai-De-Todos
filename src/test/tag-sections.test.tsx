@@ -12,7 +12,7 @@ describe("Tag section identifiers", () => {
     ["entradas", "entradas", "E", "bg-positive"],
     ["saidas", "saídas", "S", "bg-negative"],
     ["diarios", "diários", "D", "bg-chart-4"],
-    ["economias", "poupança", "P", "bg-primary"],
+    ["economias", "poupança", "P", "bg-category-savings"],
     ["cartao", "cartão", "C", "bg-chart-1"],
   ])("matches the calendar badge for %s", (kind, title, letter, tone) => {
     render(<SectionBadge kind={kind as SectionKind} />);
