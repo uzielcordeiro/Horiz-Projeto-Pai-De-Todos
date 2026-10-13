@@ -8,10 +8,12 @@
 - [x] Verificar cliques, edição simulada e retorno às outras abas.
 
 # Horizonte
+- [x] Ampliar o limite futuro para dez anos, inclusive, sem mudar lançamentos.
+- [x] Adicionar hoje ao lado esquerdo de « com espaço e restaurar mês e rolagem vigentes.
+- [x] Verificar limites e retorno a hoje com testes e na tela.
 - [x] Renomear Menu para Diário e inserir Perfil sem ação acima de Saldos, preservando o estilo dos ícones.
 - [x] Verificar a barra lateral e o acesso ao Diário.
 - [x] Trocar o fundo do Voltar pelo verde da repetição em todas as categorias.
-- [x] Ampliar a rolagem até o mês vigente mais cinco anos e verificar o limite.
 - [x] Abrir lista diária completa ou seletor de categoria nos dias vazios.
 - [x] Reutilizar formulários e oferecer Adicionar, editar e apagar.
 - [x] Verificar cálculos, parcelas e sincronização com o Calendário.

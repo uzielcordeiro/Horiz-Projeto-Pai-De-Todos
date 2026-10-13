@@ -8,16 +8,16 @@ export function shiftCalendarMonth(month: CalendarMonth, delta: number, now = ne
   return { y: date.getFullYear(), m: date.getMonth() };
 }
 
-/** Horizonte ends at the live current month plus five years, inclusive. */
+/** Horizonte ends at the live current month plus ten years, inclusive. */
 export function shiftHorizonMonth(month: CalendarMonth, delta: number, now = new Date()): CalendarMonth {
   const target = shiftCalendarMonth(month, delta, now);
-  const ceiling = { y: now.getFullYear() + 5, m: now.getMonth() };
+  const ceiling = { y: now.getFullYear() + 10, m: now.getMonth() };
   return target.y * 12 + target.m > ceiling.y * 12 + ceiling.m ? ceiling : target;
 }
 
 export function horizonMonthRange(start: CalendarMonth, now = new Date()): CalendarMonth[] {
   const first = shiftHorizonMonth(start, 0, now);
-  const last = (now.getFullYear() + 5) * 12 + now.getMonth();
+  const last = (now.getFullYear() + 10) * 12 + now.getMonth();
   const count = last - (first.y * 12 + first.m) + 1;
   return Array.from({ length: count }, (_, offset) => {
     const date = new Date(first.y, first.m + offset, 1);

@@ -1646,6 +1646,11 @@ function Index() {
               highlightDate={horizonHighlight}
               months={horizonMonths}
               todayIso={iso(today.getFullYear(), today.getMonth(), today.getDate())}
+              onToday={() => {
+                const now = new Date();
+                setHorizonHighlight(null);
+                setHorizonStart({ y: now.getFullYear(), m: now.getMonth() });
+              }}
               onShift={(delta) =>
                 setHorizonStart((h) => shiftHorizonMonth(h, delta))
               }

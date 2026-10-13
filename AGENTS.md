@@ -13,6 +13,7 @@
 - Keep whole-month gesture handling in useCalendarSwipe and month boundaries in calendar-navigation, so gestures and calendar arrows share the current-month limit without changing stored financial data or date pickers.
 - Keep tag aggregation in tag-summary, with one date/repetition detail per source and occurrence-based totals, so the Tags list can describe installment plans without changing financial storage or calendar calculations.
 - Keep Horizonte range generation and arrow bounds in calendar-navigation, so native scrolling and month/year navigation end at the same live-date boundary without changing financial storage.
+- Keep Horizonte's today action in its owner and reset the windowed board's scroll and visible range in HorizonBoard, so both arrow navigation and native scrolling return to the live month without changing financial data.
 - HorizonBoard renders only the month columns in view (fixed-width windowing) and mounts immediately on navigation, so the sidebar click stays instant; never reintroduce a deferred/placeholder mount.
 - Keep simulated profile presentation and temporary edits in ProfileBoard, separate from financial state and authentication, so account previews never alter stored transactions or imply a real subscription.
 - Keep global theme switching in ThemeToggle and semantic theme/shadow tokens in styles.css; use opaque invariant Horizon matrix tokens so changing surrounding surfaces never changes financial cell colors.
