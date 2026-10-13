@@ -6,6 +6,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
+import { ProfileBoard } from "@/components/ProfileBoard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { AddWindow } from "@/components/AddWindow";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { HorizonBoard, type HorizonDay, type HorizonMonth } from "@/components/HorizonBoard";
@@ -294,7 +296,7 @@ function Index() {
   const [forecastConfirm, setForecastConfirm] = useState(false);
   const [forecastRestoring, setForecastRestoring] = useState(false);
   const [forecastShake, setForecastShake] = useState(0);
-  const [view, setView] = useState<"saldos" | "horizonte" | "totais" | "tags" | "menu" | "diario">("saldos");
+  const [view, setView] = useState<"perfil" | "saldos" | "horizonte" | "totais" | "tags" | "menu" | "diario">("saldos");
   const [horizonStart, setHorizonStart] = useState({ y: today.getFullYear(), m: today.getMonth() });
   const canGoBack = cursor.y * 12 + cursor.m > today.getFullYear() * 12 + today.getMonth();
   const calendarSwipeRef = useCalendarSwipe(shiftMonth, canGoBack, loaded && view === "saldos" && !adding);
@@ -1483,7 +1485,7 @@ function Index() {
             setView("horizonte");
           } else if (key === "menu") {
             setView("diario");
-          } else if (key === "totais" || key === "tags") {
+          } else if (key === "perfil" || key === "totais" || key === "tags") {
             setView(key);
 
           } else {
@@ -1493,8 +1495,8 @@ function Index() {
       />
 
       <div className={isHorizon ? "flex h-screen min-w-0 flex-1 flex-col overflow-hidden" : "min-w-0 flex-1"}>
-        <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
-          <div className={`relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 ${isHorizon || isSaldos ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
+        <header className="calendar-header sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
+          <div className={`calendar-header-inner relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 ${isHorizon || isSaldos ? "px-3 py-1.5 sm:px-4" : "px-5 py-3 sm:px-8"}`}>
             <div className="flex min-w-0 items-center gap-3">
               {(view === "diario" || view === "menu") && (
                 <button
@@ -1511,11 +1513,12 @@ function Index() {
                   ? cap(today.toLocaleDateString("pt-BR", { month: "long" }))
                   : cap(view)}
               </h1>
+              <ThemeToggle />
             </div>
             {isHorizon && (
               <div
                 aria-label="Legenda dos marcadores do Horizonte"
-                className="pointer-events-none absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center gap-6 text-xs text-muted-foreground sm:gap-8"
+                className="horizon-header-legend pointer-events-none absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center gap-6 text-xs text-muted-foreground sm:gap-8"
               >
                 <span className="flex items-center gap-2 whitespace-nowrap">
                   <span aria-hidden className="horizon-reminder horizon-reminder-negative" />
@@ -1527,7 +1530,7 @@ function Index() {
                 </span>
               </div>
             )}
-            <div className={`flex shrink-0 items-center gap-2 ${view === "horizonte" || view === "menu" || view === "diario" ? "hidden" : ""}`}>
+            <div className={`calendar-date-controls flex shrink-0 items-center gap-2 ${view === "perfil" || view === "horizonte" || view === "menu" || view === "diario" ? "hidden" : ""}`}>
               <Button variant="ghost" size="icon" disabled={!canGoBack} onClick={() => shiftMonth(-12)} aria-label="Ano anterior" className={navBtn}>
                 «
               </Button>
@@ -1555,7 +1558,9 @@ function Index() {
         </header>
 
       <main className={isHorizon ? "flex min-h-0 w-full flex-1 flex-col px-2 py-2 sm:px-3" : isSaldos ? "w-full space-y-4 px-2 py-2 sm:px-3" : "w-full space-y-6 px-5 py-6 sm:px-8"}>
-        {view === "horizonte" ? (
+        {view === "perfil" && !adding ? (
+          <ProfileBoard onExit={() => setView("saldos")} />
+        ) : view === "horizonte" ? (
           <>
           {horizonJump && (() => {
             const j = horizonJump;
@@ -2072,7 +2077,7 @@ function Index() {
                   ) : (
                     <>
                       o{" "}
-                      <span className="font-bold tracking-wide text-primary uppercase">Menu</span>
+                      <span className="font-bold tracking-wide text-primary">Diário</span>
                     </>
                   )}
                   .

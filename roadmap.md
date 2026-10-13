@@ -1,4 +1,15 @@
+# Temas
+- [x] Adicionar lua/sol ao lado do título e aplicar temas em todas as abas e janelas.
+- [x] Ampliar o botão lua/sol (48×56, símbolo 32 px) desbloqueando o tamanho fixo de 16 px dos ícones do botão, sem fundo próprio.
+- [x] Preservar relevos, cores das categorias e matriz do Horizonte; verificar alternância e navegação.
+
+# Perfil
+- [x] Abrir Perfil com os dados simulados e as seis opções solicitadas, usando o estilo atual.
+- [x] Verificar cliques, edição simulada e retorno às outras abas.
+
 # Horizonte
+- [x] Renomear Menu para Diário e inserir Perfil sem ação acima de Saldos, preservando o estilo dos ícones.
+- [x] Verificar a barra lateral e o acesso ao Diário.
 - [x] Trocar o fundo do Voltar pelo verde da repetição em todas as categorias.
 - [x] Ampliar a rolagem até o mês vigente mais cinco anos e verificar o limite.
 - [x] Abrir lista diária completa ou seletor de categoria nos dias vazios.

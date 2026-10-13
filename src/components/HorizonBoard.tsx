@@ -19,19 +19,19 @@ export type HorizonMonth = {
 
 const cell: Record<Status, string> = {
   surplus: "bg-surplus text-surplus-foreground",
-  positive: "bg-positive/20 text-positive",
-  warning: "bg-warning/25 text-warning-foreground",
-  negative: "bg-negative/20 text-negative",
-  negativeDeep: "bg-negative-deep/45 text-negative-deep-text",
+  positive: "bg-horizon-positive-cell text-positive",
+  warning: "bg-horizon-warning-cell text-horizon-warning-text",
+  negative: "bg-horizon-negative-cell text-negative",
+  negativeDeep: "bg-horizon-debt-cell text-negative-deep-text",
 };
 
 
 /** mesmas cores dos dias do quadro, na ordem vermelho → amarelo → verde-claro → verde-escuro */
 const legend: { label: string; dotClass: string }[] = [
-  { label: "negativo", dotClass: "bg-negative/20" },
-  { label: "R$ 1.000 negativo ou mais", dotClass: "bg-negative-deep/45" },
-  { label: "entre R$ 0 e R$ 1.000", dotClass: "bg-warning/25" },
-  { label: "R$ 1.000 até R$ 2.000", dotClass: "bg-positive/20" },
+  { label: "negativo", dotClass: "bg-horizon-negative-cell" },
+  { label: "R$ 1.000 negativo ou mais", dotClass: "bg-horizon-debt-cell" },
+  { label: "entre R$ 0 e R$ 1.000", dotClass: "bg-horizon-warning-cell" },
+  { label: "R$ 1.000 até R$ 2.000", dotClass: "bg-horizon-positive-cell" },
   { label: "acima de R$ 2.000", dotClass: "bg-surplus" },
 ];
 

@@ -75,6 +75,13 @@
   --color-horizon-reminder-negative: var(--horizon-reminder-negative);
   --color-horizon-reminder-positive: var(--horizon-reminder-positive);
   --color-horizon-reminder-gap: var(--horizon-reminder-gap);
+  --color-category-savings: var(--category-savings);
+  --color-category-savings-foreground: var(--category-savings-foreground);
+  --color-horizon-positive-cell: var(--horizon-positive-cell);
+  --color-horizon-warning-cell: var(--horizon-warning-cell);
+  --color-horizon-negative-cell: var(--horizon-negative-cell);
+  --color-horizon-debt-cell: var(--horizon-debt-cell);
+  --color-horizon-warning-text: var(--horizon-warning-text);
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
 }
@@ -279,9 +286,83 @@
 /* Relevo 3D bem sutil (neumórfico leve): sombra suave embaixo + brilho claro no
    topo-esquerda. Intencionalmente discreto para não brigar com o clima do app. */
 @utility raise-soft {
-  box-shadow:
-    -1px -1px 1px 0 oklch(1 0 0 / 0.85),
-    1px 1px 2px 0 oklch(0.6 0.01 290 / 0.08),
-    0 8px 16px -10px oklch(0.4 0.02 290 / 0.22);
+  box-shadow: var(--relief-shadow);
+}
+
+/* Financial colors are independent of the surrounding theme. Opaque matrix
+   fills preserve the original opacity composites on the original canvas. */
+:root, .dark {
+  --positive: oklch(0.62 0.15 152);
+  --positive-foreground: oklch(0.99 0.01 150);
+  --surplus: oklch(0.55 0.085 158);
+  --surplus-foreground: oklch(0.99 0.01 150);
+  --warning: oklch(0.79 0.15 85);
+  --warning-foreground: oklch(0.28 0.06 85);
+  --negative: oklch(0.6 0.2 25);
+  --negative-foreground: oklch(0.99 0.01 25);
+  --negative-deep: oklch(0.5 0.22 23);
+  --negative-deep-text: oklch(0.33 0.13 20);
+  --category-savings: oklch(0.45 0.11 163);
+  --category-savings-foreground: oklch(0.985 0.01 150);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --horizon-original-canvas: oklch(0.94 0.006 290);
+  --horizon-positive-cell: color-mix(in srgb, var(--positive) 20%, var(--horizon-original-canvas));
+  --horizon-warning-cell: color-mix(in srgb, var(--warning) 25%, var(--horizon-original-canvas));
+  --horizon-negative-cell: color-mix(in srgb, var(--negative) 20%, var(--horizon-original-canvas));
+  --horizon-debt-cell: color-mix(in srgb, var(--negative-deep) 45%, var(--horizon-original-canvas));
+  --horizon-warning-text: oklch(0.28 0.06 85);
+}
+
+:root {
+  color-scheme: light;
+  --background: oklch(0.94 0.006 290);
+  --card: var(--background);
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+  --sidebar: oklch(0.908 0.004 286);
+  --primary: oklch(0.45 0.11 163);
+  --primary-foreground: oklch(0.985 0.01 150);
+  --ring: var(--primary);
+  --accent: oklch(0.93 0.04 160);
+  --accent-foreground: oklch(0.28 0.05 160);
+  --relief-highlight: oklch(1 0 0 / 0.85);
+  --relief-edge: oklch(0.6 0.01 290 / 0.08);
+  --relief-drop: oklch(0.4 0.02 290 / 0.22);
+  --relief-shadow: -1px -1px 1px 0 var(--relief-highlight), 1px 1px 2px 0 var(--relief-edge), 0 8px 16px -10px var(--relief-drop);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.186873 0.010684 268.112);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.2514 0.0163 264.223);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --sidebar: oklch(0.22 0.012 264 / 0.9);
+  --sidebar-foreground: var(--foreground);
+  --primary: oklch(0.75 0.12 162);
+  --primary-foreground: oklch(0.24 0.06 163);
+  --secondary: oklch(0.28 0.018 264);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.27 0.015 264);
+  --muted-foreground: oklch(0.7107 0.0351 256.788);
+  --accent: oklch(0.30 0.04 163);
+  --accent-foreground: oklch(0.85 0.10 162);
+  --border: oklch(1 0 0 / 0.12);
+  --input: oklch(1 0 0 / 0.18);
+  --ring: var(--primary);
+  --relief-highlight: oklch(1 0 0 / 0.08);
+  --relief-edge: oklch(0 0 0 / 0.6);
+  --relief-drop: oklch(0 0 0 / 0.6);
+  --warning-foreground: oklch(0.9 0.09 85);
+}
+
+.calendar-header { container-type: inline-size; }
+@container (max-width: 680px) {
+  .calendar-header-inner { grid-template-columns: minmax(0, 1fr); }
+  .calendar-date-controls { flex-wrap: wrap; }
+  .horizon-header-legend { position: static; transform: none; flex-wrap: wrap; }
 }
 

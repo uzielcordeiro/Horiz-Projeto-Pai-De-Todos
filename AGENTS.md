@@ -14,3 +14,6 @@
 - Keep tag aggregation in tag-summary, with one date/repetition detail per source and occurrence-based totals, so the Tags list can describe installment plans without changing financial storage or calendar calculations.
 - Keep Horizonte range generation and arrow bounds in calendar-navigation, so native scrolling and month/year navigation end at the same live-date boundary without changing financial storage.
 - HorizonBoard renders only the month columns in view (fixed-width windowing) and mounts immediately on navigation, so the sidebar click stays instant; never reintroduce a deferred/placeholder mount.
+- Keep simulated profile presentation and temporary edits in ProfileBoard, separate from financial state and authentication, so account previews never alter stored transactions or imply a real subscription.
+- Keep global theme switching in ThemeToggle and semantic theme/shadow tokens in styles.css; use opaque invariant Horizon matrix tokens so changing surrounding surfaces never changes financial cell colors.
+- Icons inside a shadcn Button are pinned to 16px by the base `[&_svg]:size-4` rule, so an icon's own `size` prop has no effect there; change a button icon's size with `[&_svg]:size-N` in the button's className.

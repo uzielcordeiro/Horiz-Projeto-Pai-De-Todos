@@ -1,14 +1,16 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from "react";
-import { Menu as MenuIcon, List, Map as MapIcon, Plus, Tag, Target, Wallet, Table2 } from "lucide-react";
+import { Menu as MenuIcon, NotebookPen, UserRound, Map as MapIcon, Plus, Tag, Target, Wallet, Table2 } from "lucide-react";
 import { CalendarReset } from "@/components/CalendarReset";
+import { Button } from "@/components/ui/button";
 
 type Item = { key: string; label: string; icon: React.ReactNode; soon?: boolean };
 
 const NAV: Item[] = [
+  { key: "perfil", label: "Perfil", icon: <UserRound size={16} strokeWidth={2} /> },
   { key: "saldos", label: "Saldos", icon: <Wallet size={16} strokeWidth={2} /> },
   { key: "totais", label: "Totais", icon: <Table2 size={16} strokeWidth={2} /> },
   { key: "tags", label: "Tags", icon: <Tag size={16} strokeWidth={2} /> },
-  { key: "menu", label: "Menu", icon: <List size={16} strokeWidth={2} /> },
+  { key: "menu", label: "Diário", icon: <NotebookPen size={16} strokeWidth={2} /> },
 ];
 
 export function AppSidebar({
@@ -62,7 +64,7 @@ export function AppSidebar({
 
   return (
     <aside
-      className={`relative z-[60] sticky top-0 flex h-screen shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-200 ${
+      className={`relative z-[60] sticky top-0 flex h-screen shrink-0 flex-col border-r border-border bg-sidebar backdrop-blur-xl transition-[width] duration-200 ${
         open ? "w-40" : "w-11"
       }`}
     >
@@ -86,24 +88,25 @@ export function AppSidebar({
 
       <nav className="mt-2 space-y-1 px-2">
         {NAV.map((item) => (
-          <button
+          <Button
+            variant="ghost"
             key={item.key}
             type="button"
             data-sidebar-action={item.key}
-            disabled={item.soon}
-            onPointerDown={activatePointer(item.key, () => onNavigate?.(item.key))}
-            onClick={activateClick(item.key, () => onNavigate?.(item.key))}
+            aria-disabled={item.soon || undefined}
+            onPointerDown={item.soon ? undefined : activatePointer(item.key, () => onNavigate?.(item.key))}
+            onClick={item.soon ? undefined : activateClick(item.key, () => onNavigate?.(item.key))}
             aria-label={item.label}
-            title={item.soon ? "em breve" : item.label}
-            className={`${row} ${
+            title={item.label}
+            className={`${row} h-auto justify-start ${
               item.key === active
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-            } disabled:cursor-not-allowed disabled:opacity-45`}
+            } ${item.soon ? "cursor-default hover:bg-transparent hover:text-muted-foreground" : ""}`}
           >
             <span className="flex w-4 shrink-0 justify-center">{item.icon}</span>
             {open && <span className="truncate">{item.label}</span>}
-          </button>
+          </Button>
         ))}
       </nav>
 
