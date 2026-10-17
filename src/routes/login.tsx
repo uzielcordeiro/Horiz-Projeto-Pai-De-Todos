@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { supabase, supabaseConfigured, REMEMBER_KEY } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { supabaseConfigured, REMEMBER_KEY } from "@/integrations/supabase/extras";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 

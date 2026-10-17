@@ -17,12 +17,6 @@ export type Access =
   | { kind: "inactive"; token: string; account: Account }
   | { kind: "active"; token: string; account: Account };
 
-/** Erros que significam "esta sessão salva não vale mais" — outros erros estouram. */
-function isExpiredSession(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return /não autenticado|unauthorized|invalid token|jwt expired|invalid jwt/i.test(message);
-}
-
 export async function checkAccess(): Promise<Access> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -30,9 +24,10 @@ export async function checkAccess(): Promise<Access> {
   let account: Account;
   try {
     account = await getAccount({ data: { token } });
-  } catch (error) {
-    if (isExpiredSession(error)) return { kind: "signed-out" };
-    throw error;
+  } catch {
+    // Qualquer falha na verificação (sessão expirada, servidor fora, etc.)
+    // vira estado limpo de deslogado — nunca uma exceção que derruba a tela.
+    return { kind: "signed-out" };
   }
   return account.status === "active"
     ? { kind: "active", token, account }

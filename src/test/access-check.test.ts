@@ -49,9 +49,9 @@ describe("acesso da página raiz", () => {
     expect(res.kind).toBe("inactive");
   });
 
-  it("não confunde falha do servidor com falta de login", async () => {
+  it("trata falha do servidor como estado limpo de deslogado, sem estourar erro", async () => {
     getSession.mockResolvedValue({ data: { session: { access_token: TOKEN } } });
-    getAccount.mockRejectedValue(new Error("HORIZ_SERVICE_ROLE_KEY ausente"));
-    await expect(checkAccess()).rejects.toThrow("HORIZ_SERVICE_ROLE_KEY ausente");
+    getAccount.mockRejectedValue(new Error("servidor fora do ar"));
+    await expect(checkAccess()).resolves.toEqual({ kind: "signed-out" });
   });
 });

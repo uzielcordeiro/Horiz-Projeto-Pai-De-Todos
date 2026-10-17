@@ -7,11 +7,8 @@ export const PLAN_PRICES = {
 } as const;
 
 async function admin() {
-  const { createClient } = await import("@supabase/supabase-js");
-  const url = process.env["SUPABASE_URL"] || "https://xqecbciissmdncoyozas.supabase.co";
-  const key = process.env["HORIZ_SERVICE_ROLE_KEY"];
-  if (!key) throw new Error("HORIZ_SERVICE_ROLE_KEY ausente");
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
 }
 
 async function verifyUser(token: string) {
@@ -24,8 +21,8 @@ async function verifyUser(token: string) {
 async function upsertByUser(db: Awaited<ReturnType<typeof admin>>, userId: string, fields: Record<string, unknown>) {
   const { data } = await db.from("subscriptions").select("user_id").eq("user_id", userId).maybeSingle();
   const res = data
-    ? await db.from("subscriptions").update(fields).eq("user_id", userId)
-    : await db.from("subscriptions").insert({ user_id: userId, ...fields });
+    ? await db.from("subscriptions").update(fields as never).eq("user_id", userId)
+    : await db.from("subscriptions").insert({ user_id: userId, ...fields } as never);
   if (res.error) throw new Error(res.error.message);
 }
 export { admin as billingAdmin, upsertByUser };

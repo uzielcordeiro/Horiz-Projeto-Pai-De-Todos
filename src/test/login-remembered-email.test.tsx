@@ -13,9 +13,12 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-vi.mock("@/integrations/supabase/client", () => ({
+vi.mock("@/integrations/supabase/extras", () => ({
   supabaseConfigured: true,
   REMEMBER_KEY: "horiz-remember",
+}));
+
+vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: {
       getSession: async () => ({ data: { session: null } }),
