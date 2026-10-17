@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProfileBoard } from "@/components/ProfileBoard";
+import { requireActiveSubscription } from "@/lib/access";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AddWindow } from "@/components/AddWindow";
 import { MonthCalendar } from "@/components/MonthCalendar";
@@ -38,6 +39,8 @@ import {
   dayBefore,
 } from "@/lib/recurrence";
 
+import { userKey, adoptLegacyKeys } from "@/lib/user-storage";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -58,6 +61,7 @@ export const Route = createFileRoute("/")({
     ],
   }),
   ssr: false,
+  beforeLoad: () => requireActiveSubscription(),
   pendingComponent: LoadingScreen,
   component: Index,
 });
@@ -280,6 +284,12 @@ function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number
 type MonthRows = ReturnType<typeof computeMonthRows>;
 
 function Index() {
+  const { account } = Route.useRouteContext();
+  return <IndexForUser key={account.user_id} userId={account.user_id} />;
+}
+
+function IndexForUser({ userId }: { userId: string }) {
+  const K = (base: string) => userKey(userId, base);
   const today = new Date();
   const tableRef = useRef<HTMLElement>(null);
   const tableHeaderRef = useRef<HTMLDivElement>(null);
@@ -373,6 +383,7 @@ function Index() {
   useLayoutEffect(() => {
     // Lê cada parte separadamente; se a principal falhar, tenta a cópia de segurança.
     // Nunca deixa um defeito numa parte apagar as outras.
+    adoptLegacyKeys(userId, [STORAGE_KEY, REC_KEY, FORECAST_KEY, FORECAST_DIVISOR_KEY, TAGS_KEY].flatMap((b) => [b, b + BACKUP_SUFFIX]));
     function readKey<T>(key: string, parse: (raw: string) => T): T | undefined {
       for (const k of [key, key + BACKUP_SUFFIX]) {
         try {
@@ -390,31 +401,31 @@ function Index() {
       }
       return undefined;
     }
-    const e = readKey(STORAGE_KEY, (raw) => {
+    const e = readKey(K(STORAGE_KEY), (raw) => {
       const p = JSON.parse(raw) as Entry[];
       if (!Array.isArray(p)) throw new Error("bad");
       return p.map((x) => ({ ...x, kind: x.kind ?? "entradas" }));
     });
     if (e) setEntries(e);
-    const r = readKey(REC_KEY, (raw) => {
+    const r = readKey(K(REC_KEY), (raw) => {
       const p = JSON.parse(raw) as Recurrence[];
       if (!Array.isArray(p)) throw new Error("bad");
       return p.map((x) => ({ ...x, skipped: x.skipped ?? [] }));
     });
     if (r) setRecurrences(r);
-    const f = readKey(FORECAST_KEY, (raw) => {
+    const f = readKey(K(FORECAST_KEY), (raw) => {
       const p = JSON.parse(raw) as ForecastItem[];
       if (!Array.isArray(p)) throw new Error("bad");
       return p;
     });
     if (f) setForecastItems(f);
-    const d = readKey(FORECAST_DIVISOR_KEY, (raw) => {
+    const d = readKey(K(FORECAST_DIVISOR_KEY), (raw) => {
       const n = Number(raw);
       if (!Number.isFinite(n) || n <= 0) throw new Error("bad");
       return n;
     });
     if (d) setForecastDivisor(d);
-    const t = readKey(TAGS_KEY, (raw) => JSON.parse(raw) as { custom?: string[]; deleted?: string[] });
+    const t = readKey(K(TAGS_KEY), (raw) => JSON.parse(raw) as { custom?: string[]; deleted?: string[] });
     if (t) {
       setCustomTags(t.custom ?? []);
       setDeletedTags(t.deleted ?? []);
@@ -437,11 +448,11 @@ function Index() {
         /* ignore */
       }
     };
-    write(STORAGE_KEY, JSON.stringify(entries));
-    write(REC_KEY, JSON.stringify(recurrences));
-    write(FORECAST_KEY, JSON.stringify(forecastItems));
-    write(FORECAST_DIVISOR_KEY, String(forecastDivisor));
-    write(TAGS_KEY, JSON.stringify({ custom: customTags, deleted: deletedTags }));
+    write(K(STORAGE_KEY), JSON.stringify(entries));
+    write(K(REC_KEY), JSON.stringify(recurrences));
+    write(K(FORECAST_KEY), JSON.stringify(forecastItems));
+    write(K(FORECAST_DIVISOR_KEY), String(forecastDivisor));
+    write(K(TAGS_KEY), JSON.stringify({ custom: customTags, deleted: deletedTags }));
   }, [entries, recurrences, forecastItems, forecastDivisor, customTags, deletedTags, loaded]);
 
   // sincroniza a previsão gasto diário como saída diária automática no calendário
@@ -1559,7 +1570,7 @@ function Index() {
 
       <main className={isHorizon ? "flex min-h-0 w-full flex-1 flex-col px-2 py-2 sm:px-3" : isSaldos ? "w-full space-y-4 px-2 py-2 sm:px-3" : "w-full space-y-6 px-5 py-6 sm:px-8"}>
         {view === "perfil" && !adding ? (
-          <ProfileBoard onExit={() => setView("saldos")} />
+          <ProfileBoard />
         ) : view === "horizonte" ? (
           <>
           {horizonJump && (() => {

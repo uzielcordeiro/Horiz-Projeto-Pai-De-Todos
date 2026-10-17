@@ -366,3 +366,12 @@
   .horizon-header-legend { position: static; transform: none; flex-wrap: wrap; }
 }
 
+/* Oculta o selo flutuante "Edit with Lovable" (injetado fora do app). */
+#lovable-badge,
+#lovable-badge-cta {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+

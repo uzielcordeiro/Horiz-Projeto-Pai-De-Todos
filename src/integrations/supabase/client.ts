@@ -7,6 +7,9 @@ const key = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] || import.meta.env[
 
 export const supabaseConfigured = true;
 
+export const REMEMBER_KEY = "horiz-remember";
+export const ACTIVE_KEY = "horiz-active-tab";
+
 export const supabase = createClient(url, key, {
   auth: {
     storage: typeof window !== "undefined" ? window.localStorage : undefined,
@@ -14,3 +17,13 @@ export const supabase = createClient(url, key, {
     autoRefreshToken: true,
   },
 });
+
+// "Lembrar de mim" desmarcado: encerra a sessão quando o navegador é reaberto.
+if (typeof window !== "undefined") {
+  try {
+    if (localStorage.getItem(REMEMBER_KEY) === "0" && !sessionStorage.getItem(ACTIVE_KEY)) {
+      void supabase.auth.signOut({ scope: "local" });
+    }
+    sessionStorage.setItem(ACTIVE_KEY, "1");
+  } catch { /* storage indisponível */ }
+}
