@@ -2,12 +2,13 @@ import { submitOnEnter, submitFormOnEnter } from "@/lib/enter-submit";
 import { FitMoney } from "@/components/FitMoney";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Button } from "@/components/ui/button";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProfileBoard } from "@/components/ProfileBoard";
-import { requireActiveSubscription } from "@/lib/access";
+import { checkAccess } from "@/lib/access";
+import { LoaderCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AddWindow } from "@/components/AddWindow";
 import { MonthCalendar } from "@/components/MonthCalendar";
@@ -61,14 +62,21 @@ export const Route = createFileRoute("/")({
     ],
   }),
   ssr: false,
-  beforeLoad: () => requireActiveSubscription(),
+  // getSession() decide o acesso; enquanto isso, a tela de carregamento fica no
+  // lugar. A troca de rota acontece depois, para não quebrar a hidratação.
+  loader: () => checkAccess(),
   pendingComponent: LoadingScreen,
   component: Index,
 });
 
+/** Indicador exibido enquanto a sessão é verificada — nada é renderizado antes. */
 function LoadingScreen() {
   return (
-    <div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">
+    <div
+      className="grid min-h-screen place-items-center gap-3 bg-background text-sm text-muted-foreground"
+      role="status"
+    >
+      <LoaderCircle className="size-6 animate-spin" strokeWidth={2} aria-hidden />
       carregando…
     </div>
   );
@@ -284,8 +292,18 @@ function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number
 type MonthRows = ReturnType<typeof computeMonthRows>;
 
 function Index() {
-  const { account } = Route.useRouteContext();
-  return <IndexForUser key={account.user_id} userId={account.user_id} />;
+  const access = Route.useLoaderData();
+  const navigate = useNavigate();
+
+  // Sem sessão não há dados para mostrar: volta ao login. Assinatura não ativa
+  // segue para os planos, como antes.
+  useEffect(() => {
+    if (access.kind === "signed-out") void navigate({ to: "/login", replace: true });
+    else if (access.kind === "inactive") void navigate({ to: "/planos", replace: true });
+  }, [access.kind, navigate]);
+
+  if (access.kind !== "active") return <LoadingScreen />;
+  return <IndexForUser key={access.account.user_id} userId={access.account.user_id} />;
 }
 
 function IndexForUser({ userId }: { userId: string }) {

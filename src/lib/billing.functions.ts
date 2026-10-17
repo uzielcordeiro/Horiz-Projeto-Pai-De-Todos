@@ -45,6 +45,9 @@ export const getAccount = createServerFn({ method: "POST" })
     return { user_id: user.id, email: user.email ?? "", status: (row?.status as string | null) ?? null, full_name: (row?.full_name as string | null) ?? "", whatsapp: (row?.whatsapp as string | null) ?? "" };
   });
 
+/** Perfil + assinatura do usuário autenticado, como devolvido por getAccount. */
+export type Account = Awaited<ReturnType<typeof getAccount>>;
+
 export const saveProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     tokenSchema.extend({ full_name: z.string().trim().min(1).max(80), whatsapp: z.string().trim().min(8).max(20) }).parse(d),
