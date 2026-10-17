@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProfileBoard } from "@/components/ProfileBoard";
-import { checkAccess } from "@/lib/access";
+import { supabase } from "@/integrations/supabase/client";
 import { LoaderCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AddWindow } from "@/components/AddWindow";
@@ -62,10 +62,6 @@ export const Route = createFileRoute("/")({
     ],
   }),
   ssr: false,
-  // getSession() decide o acesso; enquanto isso, a tela de carregamento fica no
-  // lugar. A troca de rota acontece depois, para não quebrar a hidratação.
-  loader: () => checkAccess(),
-  pendingComponent: LoadingScreen,
   component: Index,
 });
 
@@ -292,18 +288,27 @@ function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number
 type MonthRows = ReturnType<typeof computeMonthRows>;
 
 function Index() {
-  const access = Route.useLoaderData();
   const navigate = useNavigate();
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Sem sessão não há dados para mostrar: volta ao login. Assinatura não ativa
-  // segue para os planos, como antes.
+  // Verifica a sessão uma única vez após montar: com usuário, abre o painel;
+  // sem usuário, vai para o login.
   useEffect(() => {
-    if (access.kind === "signed-out") void navigate({ to: "/login", replace: true });
-    else if (access.kind === "inactive") void navigate({ to: "/planos", replace: true });
-  }, [access.kind, navigate]);
+    let cancelled = false;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      const id = data.session?.user.id ?? null;
+      if (id) setUserId(id);
+      else void navigate({ to: "/login", replace: true });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  if (access.kind !== "active") return <LoadingScreen />;
-  return <IndexForUser key={access.account.user_id} userId={access.account.user_id} />;
+  if (!userId) return <LoadingScreen />;
+  return <IndexForUser key={userId} userId={userId} />;
 }
 
 function IndexForUser({ userId }: { userId: string }) {

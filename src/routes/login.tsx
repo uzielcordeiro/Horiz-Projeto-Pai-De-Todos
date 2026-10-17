@@ -47,10 +47,7 @@ export function LoginPage() {
       }
       setRemember(localStorage.getItem(REMEMBER_KEY) !== "0");
     } catch { /* ignore */ }
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/", replace: true });
-    });
-  }, [navigate]);
+  }, []);
 
   function switchMode(m: typeof mode) { setMode(m); setMsg(null); }
 
