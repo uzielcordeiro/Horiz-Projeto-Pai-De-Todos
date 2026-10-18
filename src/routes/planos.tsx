@@ -26,6 +26,19 @@ export const Route = createFileRoute("/planos")({
   component: PlansPage,
 });
 
+/**
+ * Extrai a URL de pagamento de qualquer formato de resposta do createCheckout
+ * (url, checkoutUrl, data.url ou data.checkoutUrl). Lança se nada vier.
+ */
+export function checkoutUrlFrom(response: unknown): string {
+  const r = response as { url?: unknown; checkoutUrl?: unknown; data?: { url?: unknown; checkoutUrl?: unknown } };
+  const url = [r?.url, r?.checkoutUrl, r?.data?.url, r?.data?.checkoutUrl]
+    .find((v): v is string => typeof v === "string" && v.trim().length > 0);
+  if (!url) throw new Error("URL de pagamento não retornada pelo servidor.");
+  return url;
+}
+
+
 function PlansPage() {
   const { token, account } = Route.useRouteContext();
   const { signingOut, signOut } = useSignOut();
@@ -52,7 +65,15 @@ function PlansPage() {
   async function subscribe(plan: "monthly" | "yearly") {
     if (loadingPlan) return;
     setLoadingPlan(plan); setErr(null);
-    try { const { url } = await createCheckout({ data: { token, plan, origin: window.location.origin } }); window.location.href = url; }
+    try {
+      const response = await createCheckout({ data: { token, plan, origin: window.location.origin } });
+      // Aceita qualquer nome de propriedade retornado pela Edge Function: url, checkoutUrl, data.url ou data.checkoutUrl.
+      const checkoutUrl = (response as any)?.url || (response as any)?.checkoutUrl || (response as any)?.data?.url || (response as any)?.data?.checkoutUrl;
+      if (!checkoutUrl) {
+        throw new Error("URL de pagamento não retornada pelo servidor.");
+      }
+      window.location.href = checkoutUrl;
+    }
     catch (x) { setErr((x as Error).message); setLoadingPlan(null); }
   }
   const input = "h-11 w-full rounded-lg border border-input bg-background px-3 text-foreground outline-none focus:border-primary";
