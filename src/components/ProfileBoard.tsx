@@ -1,8 +1,4 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useSignOut } from "@/lib/session";
-import { SigningOut } from "@/components/SigningOut";
-import { getAccount, saveProfile } from "@/lib/billing.functions";
+import { useState } from "react";
 import { Check, ChevronRight, CircleHelp, FileText, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddWindow } from "@/components/AddWindow";
@@ -25,28 +21,11 @@ const PENDING_TEXT = {
   privacy: "A política de privacidade ainda não foi disponibilizada.",
 };
 
-export function ProfileBoard() {
-  const { signingOut, signOut } = useSignOut();
-  const [profile, setProfile] = useState({ name: "", email: "", whatsapp: "" });
-  const [saveErr, setSaveErr] = useState<string | null>(null);
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      const token = data.session?.access_token;
-      if (!token) return;
-      const a = await getAccount({ data: { token } });
-      setProfile({ name: a.full_name, email: a.email, whatsapp: a.whatsapp });
-    }).catch(() => {});
-  }, []);
+export function ProfileBoard({ onExit }: { onExit: () => void }) {
+  const [profile, setProfile] = useState({ name: "Uziel", email: "uzivida@gmail.com" });
   const [draft, setDraft] = useState(profile);
   const [selected, setSelected] = useState<OptionKey | null>(null);
   const option = OPTIONS.find((item) => item.key === selected);
-
-  // "sair" fecha a sessão, mostra "Saindo..." por um instante e então segue
-  // para /login com replace — o Voltar do navegador não reabre a área logada.
-  function handleSignOut() {
-    setSelected(null);
-    void signOut();
-  }
 
   return (
     <section aria-label="Dados do perfil" className="mx-auto w-full max-w-2xl py-2 sm:py-4">
@@ -77,34 +56,29 @@ export function ProfileBoard() {
       {selected && option && (
         <AddWindow title={option.label} onClose={() => setSelected(null)}>
           {selected === "edit" ? (
-            <form className="space-y-4" onSubmit={async (event) => {
+            <form className="space-y-4" onSubmit={(event) => {
               event.preventDefault();
-              if (!draft.name.trim() || !draft.whatsapp.trim()) return;
-              setSaveErr(null);
-              try {
-                const { data } = await supabase.auth.getSession();
-                await saveProfile({ data: { token: data.session?.access_token ?? "", full_name: draft.name.trim(), whatsapp: draft.whatsapp.trim() } });
-                setProfile({ ...profile, name: draft.name.trim(), whatsapp: draft.whatsapp.trim() });
-                setSelected(null);
-              } catch (x) { setSaveErr((x as Error).message); }
+              if (!draft.name.trim() || !draft.email.trim()) return;
+              setProfile({ name: draft.name.trim(), email: draft.email.trim() });
+              setSelected(null);
             }}>
               <label className="block space-y-2 text-sm text-muted-foreground">
                 <span>nome</span>
                 <input autoFocus required maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-foreground outline-none focus:border-primary" />
               </label>
               <label className="block space-y-2 text-sm text-muted-foreground">
-                <span>WhatsApp</span>
-                <input required type="tel" minLength={8} maxLength={20} value={draft.whatsapp} onChange={(event) => setDraft({ ...draft, whatsapp: event.target.value })} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-foreground outline-none focus:border-primary" />
+                <span>e-mail</span>
+                <input required type="email" maxLength={254} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-foreground outline-none focus:border-primary" />
               </label>
-              {saveErr && <p className="text-sm text-destructive">{saveErr}</p>}
+              <p className="text-sm text-muted-foreground">Alterações apenas nesta simulação.</p>
               <Button type="submit" className="w-full">salvar</Button>
             </form>
           ) : selected === "exit" ? (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Sair da sua conta? Seus lançamentos serão mantidos.</p>
+              <p className="text-sm text-muted-foreground">Sair do perfil simulado? Seus lançamentos serão mantidos.</p>
               <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setSelected(null)} disabled={signingOut}>cancelar</Button>
-                <Button onClick={handleSignOut} disabled={signingOut}>sair</Button>
+                <Button variant="ghost" onClick={() => setSelected(null)}>cancelar</Button>
+                <Button onClick={() => { setSelected(null); onExit(); }}>sair</Button>
               </div>
             </div>
           ) : (
@@ -112,7 +86,6 @@ export function ProfileBoard() {
           )}
         </AddWindow>
       )}
-      <SigningOut show={signingOut} />
     </section>
   );
 }

@@ -1,10 +1,6 @@
-# Home
-- [x] Abrir checkout diretamente pelos botões mensal/anual, sem exigir login; ambos verificados no Stripe em ambiente de teste.
-- [x] Criar a home pública com o modelo enviado e preservar o aplicativo e login.
-- [x] Conectar os botões aos preços mensal/anual e conferir navegação.
-- [ ] Ativar pagamentos reais e liberação automática da assinatura (aguarda configuração live, assinatura dos avisos Stripe e administrador da conta existente).
-
 # Temas
+- [ ] Criar página inicial enviada, preservar calendário e ligar os dois planos Stripe com acesso seguro.
+- [ ] Verificar página, botões independentes e abertura do pagamento; informar limitações de teste.
 - [x] Adicionar lua/sol ao lado do título e aplicar temas em todas as abas e janelas.
 - [x] Ampliar o botão lua/sol (48×56, símbolo 32 px) desbloqueando o tamanho fixo de 16 px dos ícones do botão, sem fundo próprio.
 - [x] Preservar relevos, cores das categorias e matriz do Horizonte; verificar alternância e navegação.
@@ -14,12 +10,10 @@
 - [x] Verificar cliques, edição simulada e retorno às outras abas.
 
 # Horizonte
-- [x] Ampliar o limite futuro para dez anos, inclusive, sem mudar lançamentos.
-- [x] Adicionar hoje ao lado esquerdo de « com espaço e restaurar mês e rolagem vigentes.
-- [x] Verificar limites e retorno a hoje com testes e na tela.
 - [x] Renomear Menu para Diário e inserir Perfil sem ação acima de Saldos, preservando o estilo dos ícones.
 - [x] Verificar a barra lateral e o acesso ao Diário.
 - [x] Trocar o fundo do Voltar pelo verde da repetição em todas as categorias.
+- [x] Ampliar a rolagem até o mês vigente mais cinco anos e verificar o limite.
 - [x] Abrir lista diária completa ou seletor de categoria nos dias vazios.
 - [x] Reutilizar formulários e oferecer Adicionar, editar e apagar.
 - [x] Verificar cálculos, parcelas e sincronização com o Calendário.

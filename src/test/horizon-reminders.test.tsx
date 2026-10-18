@@ -15,7 +15,7 @@ function month(balances: number[], m = 9): HorizonMonth {
 }
 
 function show(months: HorizonMonth[]) {
-  return render(<HorizonBoard months={months} todayIso="" onShift={vi.fn()} onToday={vi.fn()} onPick={vi.fn()} />);
+  return render(<HorizonBoard months={months} todayIso="" onShift={vi.fn()} onPick={vi.fn()} />);
 }
 
 describe("Lembretes mensais do Horizonte", () => {

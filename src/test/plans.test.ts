@@ -1,17 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { parsePlan, PLANS } from "@/lib/plans";
+import { parsePlan, plans } from "@/lib/plans";
 
-describe("planos fornecidos", () => {
-  it("usa o preço mensal fornecido", () => {
-    expect(PLANS.monthly).toEqual({ amount: 27, priceId: "price_1UQyygIAIPw2F9ku9aP2Bu7G" });
+describe("Planos Stripe enviados", () => {
+  it("usa o preço mensal de R$ 27", () => {
+    expect(plans.monthly).toEqual({ priceId: "price_1UQyygIAIPw2F9ku9aP2Bu7G", amount: 2700, interval: "month" });
   });
-  it("usa o preço anual fornecido", () => {
-    expect(PLANS.yearly).toEqual({ amount: 302, priceId: "price_1UQz0gIAIPw2F9kumCop2W12" });
+  it("usa o preço anual de R$ 302", () => {
+    expect(plans.yearly).toEqual({ priceId: "price_1UQz0gIAIPw2F9kumCop2W12", amount: 30200, interval: "year" });
   });
-  it("preserva apenas as duas opções válidas de checkout", () => {
+  it("rejeita planos fora da lista permitida", () => {
+    expect(() => parsePlan("custom")).toThrow();
     expect(parsePlan("monthly")).toBe("monthly");
     expect(parsePlan("yearly")).toBe("yearly");
-    expect(parsePlan("https://example.com")).toBeUndefined();
-    expect(parsePlan("price_fake")).toBeUndefined();
   });
 });

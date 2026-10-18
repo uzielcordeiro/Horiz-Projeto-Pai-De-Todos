@@ -154,8 +154,10 @@ export function AppSidebar({
       </div>
 
       {onReset && (
-        <div className="flex flex-1 items-center px-2">
-          <CalendarReset onReset={onReset} compact={!open} />
+        <div className="relative min-h-32 flex-1">
+          <div className={`absolute top-1/2 -translate-y-1/2 ${open ? "left-4" : "left-2"}`}>
+            <CalendarReset onReset={onReset} compact={!open} />
+          </div>
         </div>
       )}
     </aside>

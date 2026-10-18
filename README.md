@@ -1,12 +1,13 @@
-# Project Horizon Core
+# Root Project Hub
 
-https://github.com/uzielcordeiro/Horiz-Projeto-Pai-De-Todos recriar aqui
+https://github.com/uzielcordeiro/Horiz-Projeto-Pai-De-Todos
+recriar aqui
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/07d6c2e8-69e3-4c88-a47b-29676dfc948e).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/19884df1-b0da-45e4-b2c8-1da67ac3cfcb).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.

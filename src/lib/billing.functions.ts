@@ -1,92 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { PLANS } from "@/lib/plans";
-
-export const PLAN_PRICES = {
-  monthly: PLANS.monthly.priceId,
-  yearly: PLANS.yearly.priceId,
-} as const;
-
-async function admin() {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin;
-}
-
-async function verifyUser(token: string) {
-  const db = await admin();
-  const { data, error } = await db.auth.getUser(token);
-  if (error || !data.user) throw new Error("Não autenticado");
-  return { db, user: data.user };
-}
-
-async function upsertByUser(db: Awaited<ReturnType<typeof admin>>, userId: string, fields: Record<string, unknown>) {
-  const { data } = await db.from("subscriptions").select("user_id").eq("user_id", userId).maybeSingle();
-  const res = data
-    ? await db.from("subscriptions").update(fields as never).eq("user_id", userId)
-    : await db.from("subscriptions").insert({ user_id: userId, ...fields } as never);
-  if (res.error) throw new Error(res.error.message);
-}
-export { admin as billingAdmin, upsertByUser };
-
-const tokenSchema = z.object({ token: z.string().min(10) });
-
-export const getAccount = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => tokenSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { db, user } = await verifyUser(data.token);
-    let { data: row } = await db.from("subscriptions").select("status, full_name, whatsapp").eq("user_id", user.id).maybeSingle();
-    const meta = user.user_metadata ?? {};
-    if (!row?.full_name && (meta["full_name"] || meta["whatsapp"])) {
-      await upsertByUser(db, user.id, { full_name: meta["full_name"] ?? null, whatsapp: meta["whatsapp"] ?? null });
-      row = { status: row?.status ?? null, full_name: meta["full_name"] ?? null, whatsapp: meta["whatsapp"] ?? null };
-    }
-    return { user_id: user.id, email: user.email ?? "", status: (row?.status as string | null) ?? null, full_name: (row?.full_name as string | null) ?? "", whatsapp: (row?.whatsapp as string | null) ?? "" };
-  });
-
-/** Perfil + assinatura do usuário autenticado, como devolvido por getAccount. */
-export type Account = Awaited<ReturnType<typeof getAccount>>;
-
-export const saveProfile = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    tokenSchema.extend({ full_name: z.string().trim().min(1).max(80), whatsapp: z.string().trim().min(8).max(20) }).parse(d),
-  )
-  .handler(async ({ data }) => {
-    const { db, user } = await verifyUser(data.token);
-    await upsertByUser(db, user.id, { full_name: data.full_name, whatsapp: data.whatsapp });
-    await db.auth.admin.updateUserById(user.id, { user_metadata: { full_name: data.full_name, whatsapp: data.whatsapp } });
-    return { ok: true };
-  });
+import { getRequest } from "@tanstack/react-start/server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { parsePlan, type Plan } from "./plans";
 
 export const createCheckout = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ token: z.string().min(10).optional(), plan: z.enum(["monthly", "yearly"]), origin: z.string().url() }).parse(d))
-  .handler(async ({ data }) => {
-    // Public landing checkout needs no session. Existing authenticated callers
-    // still associate the subscription with their verified account.
-    const user = data.token ? (await verifyUser(data.token)).user : undefined;
-    const key = process.env["STRIPE_SECRET_KEY"];
-    if (!key) throw new Error("STRIPE_SECRET_KEY ausente");
-    // Payment methods are managed in the Stripe Dashboard (dynamic payment methods).
-    const p = new URLSearchParams({
-      mode: "subscription",
-      "line_items[0][price]": PLAN_PRICES[data.plan],
-      "line_items[0][quantity]": "1",
-      success_url: `${data.origin}/app?checkout=sucesso`,
-      cancel_url: `${data.origin}/#planos`,
-    });
-    if (user) {
-      p.set("client_reference_id", user.id);
-      p.set("metadata[user_id]", user.id);
-      p.set("subscription_data[metadata][user_id]", user.id);
-      if (user.email) p.set("customer_email", user.email);
-    }
-    const res = (await fetch("https://api.stripe.com/v1/checkout/sessions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
-      body: p,
-    }).then((r) => r.json())) as { url?: string; error?: { message: string } };
-    if (!res.url) {
-      console.error("Stripe checkout error:", res.error?.message);
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { plan: Plan; origin: string }) => ({ plan: parsePlan(input.plan), origin: input.origin }))
+  .handler(async ({ data, context }) => {
+    const secret = process.env['STRIPE_SECRET_KEY'];
+    if (!secret) throw new Error("Pagamento indisponível no momento.");
+    const request = getRequest();
+    const origin = request.headers.get("origin") ?? new URL(request.url).origin;
+    if (data.origin !== origin) throw new Error("Origem inválida.");
+    const { data: userData, error } = await context.supabase.auth.getUser();
+    if (error || !userData.user?.email) throw new Error("Entre na sua conta para assinar.");
+    const { startCheckout } = await import("./billing.server");
+    try {
+      return await startCheckout(secret, userData.user.email, context.userId, data.plan, origin);
+    } catch (error) {
+      console.error("[checkout] Falha ao abrir sessão", error instanceof Error ? error.message : "unknown");
       throw new Error("Não foi possível abrir o pagamento. Tente novamente em instantes.");
     }
-    return { url: res.url };
   });

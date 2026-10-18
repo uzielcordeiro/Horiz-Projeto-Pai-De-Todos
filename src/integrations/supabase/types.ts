@@ -14,54 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      subscriptions: {
-        Row: {
-          amount_paid: number | null
-          created_at: string
-          current_period_end: string | null
-          current_period_start: string | null
-          full_name: string | null
-          payment_method_type: string | null
-          price_id: string | null
-          status: string | null
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
-          updated_at: string
-          user_id: string
-          whatsapp: string | null
-        }
-        Insert: {
-          amount_paid?: number | null
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          full_name?: string | null
-          payment_method_type?: string | null
-          price_id?: string | null
-          status?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          updated_at?: string
-          user_id: string
-          whatsapp?: string | null
-        }
-        Update: {
-          amount_paid?: number | null
-          created_at?: string
-          current_period_end?: string | null
-          current_period_start?: string | null
-          full_name?: string | null
-          payment_method_type?: string | null
-          price_id?: string | null
-          status?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          updated_at?: string
-          user_id?: string
-          whatsapp?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never

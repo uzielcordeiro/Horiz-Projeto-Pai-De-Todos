@@ -1,9 +1,11 @@
-export const PLANS = {
-  monthly: { priceId: "price_1UQyygIAIPw2F9ku9aP2Bu7G", amount: 27 },
-  yearly: { priceId: "price_1UQz0gIAIPw2F9kumCop2W12", amount: 302 },
+export type Plan = "monthly" | "yearly";
+
+export const plans = {
+  monthly: { priceId: "price_1UQyygIAIPw2F9ku9aP2Bu7G", amount: 2700, interval: "month" },
+  yearly: { priceId: "price_1UQz0gIAIPw2F9kumCop2W12", amount: 30200, interval: "year" },
 } as const;
 
-export type Plan = keyof typeof PLANS;
-export function parsePlan(value: unknown): Plan | undefined {
-  return value === "monthly" || value === "yearly" ? value : undefined;
+export function parsePlan(value: unknown): Plan {
+  if (value !== "monthly" && value !== "yearly") throw new Error("Plano inválido.");
+  return value;
 }

@@ -1,5 +1,4 @@
 import { FitMoney } from "@/components/FitMoney";
-import { Button } from "@/components/ui/button";
 import { memo, useEffect, useRef, useState } from "react";
 
 type Status = "surplus" | "positive" | "warning" | "negative" | "negativeDeep";
@@ -41,7 +40,6 @@ const legend: { label: string; dotClass: string }[] = [
 type Props = {
   months: HorizonMonth[];
   onShift: (delta: number) => void;
-  onToday: () => void;
   onPick: (y: number, m: number, day: number) => void;
   todayIso: string;
   highlightDate?: string | null;
@@ -147,7 +145,7 @@ const OVERSCAN = 3;
 /** Colunas desenhadas no primeiro quadro, antes de medir a tela (cobre telas largas). */
 const INITIAL_COLUMNS = 12;
 
-export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highlightDate }: Props) {
+export function HorizonBoard({ months, onShift, onPick, todayIso, highlightDate }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState({ from: 0, to: INITIAL_COLUMNS });
   const nav =
@@ -157,7 +155,7 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
 
-  // Desenha apenas as colunas na área visível (mais uma folga). Com ~120 meses
+  // Desenha apenas as colunas na área visível (mais uma folga). Com ~60 meses
   // no quadro, desenhar tudo de uma vez travava o clique no menu lateral.
   useEffect(() => {
     const el = scrollerRef.current;
@@ -183,7 +181,7 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
         <ul className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           {legend.map((item) => (
             <li key={item.label} className="flex items-center gap-1.5 whitespace-nowrap">
@@ -192,22 +190,7 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
             </li>
           ))}
         </ul>
-        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              const scroller = scrollerRef.current;
-              if (scroller) {
-                scroller.scrollLeft = 0;
-                scroller.scrollTop = 0;
-              }
-              setRange({ from: 0, to: INITIAL_COLUMNS });
-              onToday();
-            }}
-            className="mr-2 h-9 rounded-full border-[1.5px] border-foreground/30 bg-accent/60 px-3 text-xs font-bold text-foreground transition-colors hover:bg-accent sm:mr-3"
-          >
-            hoje
-          </Button>
+        <div className="flex shrink-0 items-center gap-1">
           <button onClick={() => onShift(-12)} aria-label="12 meses antes" className={navYear}>
             «
           </button>
