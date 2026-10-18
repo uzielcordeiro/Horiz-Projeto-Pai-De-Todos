@@ -1,0 +1,1 @@
+import util from "node:util"; if (!util.styleText) { util.styleText = (s, t) => t; } Object.defineProperty(process, "versions", { value: { ...process.versions, node: "22.5.0" }, configurable: true }); import("./node_modules/vite/bin/vite.js");

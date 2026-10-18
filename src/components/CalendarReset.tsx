@@ -27,20 +27,21 @@ export function CalendarReset({ onReset, compact = false }: Props) {
   };
 
   return (
-    <div ref={root} className="relative justify-self-center">
+    <div ref={root} className="relative w-full">
       <Button
-        variant="outline"
+        variant="ghost"
         size="sm"
-        className={`rounded-full border-negative/40 bg-negative/10 text-negative hover:bg-negative/20 hover:text-negative ${
-          compact ? "size-8 p-0" : ""
+        className={`h-auto items-center gap-3 rounded-xl px-2 py-2 text-sm font-medium text-foreground transition-colors hover:bg-negative/10 hover:text-foreground ${
+          compact ? "w-full justify-center px-0" : "w-full justify-start"
         }`}
-        aria-label="Resetar Tudo"
-        title="Resetar Tudo"
+        aria-label="Resetar tudo"
+        title="Resetar tudo"
         aria-haspopup="menu"
         aria-expanded={open || !!restore}
         onClick={() => { if (!restore) setOpen((value) => !value); }}
       >
-        {compact ? <RotateCcw /> : "Resetar Tudo"}
+        <span className="flex w-4 shrink-0 justify-center"><RotateCcw size={16} strokeWidth={2} /></span>
+        {!compact && <span className="truncate">Resetar tudo</span>}
       </Button>
       {(open || restore) && (
         <div role="menu" aria-label="Resetar sistema" className="absolute left-0 top-full z-50 mt-2 flex w-36 flex-col gap-2">
