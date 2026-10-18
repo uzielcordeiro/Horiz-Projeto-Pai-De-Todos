@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { supabaseConfigured, REMEMBER_KEY } from "@/integrations/supabase/extras";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
+import { parsePlan, type Plan } from "@/lib/plans";
+import { createCheckout } from "@/lib/billing.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 const REMEMBERED_EMAIL_KEY = "remembered_email";
 const LEGACY_EMAIL_KEY = "horiz-last-email";
@@ -12,6 +15,10 @@ const SUPPORT_EMAIL = "suporte@horiz.app";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>): { plan?: Plan } => {
+    const plan = parsePlan(search["plan"]);
+    return plan ? { plan } : {};
+  },
   head: () => ({
     meta: [
       { title: "Entrar — HORIZ" },
@@ -27,6 +34,8 @@ export const Route = createFileRoute("/login")({
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const checkout = useServerFn(createCheckout);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | undefined>();
   const [mode, setMode] = useState<"in" | "up" | "forgot">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,6 +47,7 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    setSelectedPlan(parsePlan(new URLSearchParams(window.location.search).get("plan")));
     try {
       const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? localStorage.getItem(LEGACY_EMAIL_KEY);
       if (saved) {
@@ -51,6 +61,21 @@ export function LoginPage() {
 
   function switchMode(m: typeof mode) { setMode(m); setMsg(null); }
 
+  async function enterApp(token?: string) {
+    if (!selectedPlan || !token) {
+      await navigate({ to: "/app", replace: true });
+      return;
+    }
+    setBusy(true);
+    try {
+      const { url } = await checkout({ data: { token, plan: selectedPlan, origin: window.location.origin } });
+      window.location.assign(url);
+    } catch {
+      setMsg({ ok: false, text: "Você entrou, mas não foi possível abrir o pagamento. Tente novamente em instantes." });
+      setBusy(false);
+    }
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -62,24 +87,24 @@ export function LoginPage() {
       return setMsg({ ok: true, text: "Se o e-mail estiver cadastrado, você receberá um link para criar uma nova senha." });
     }
     if (mode === "in") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
       if (error) return setMsg({ ok: false, text: error.message });
       try {
         localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
         localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
       } catch { /* ignore */ }
-      navigate({ to: "/", replace: true });
+      await enterApp(data?.session?.access_token);
     } else {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName.trim(), whatsapp: whatsapp.trim() }, emailRedirectTo: `${window.location.origin}/` },
+        options: { data: { full_name: fullName.trim(), whatsapp: whatsapp.trim() }, emailRedirectTo: selectedPlan ? `${window.location.origin}/login?plan=${selectedPlan}` : `${window.location.origin}/app` },
       });
       setBusy(false);
       if (error) return setMsg({ ok: false, text: error.message });
       try { localStorage.setItem(REMEMBERED_EMAIL_KEY, email); } catch { /* ignore */ }
-      if (data.session) navigate({ to: "/", replace: true });
+      if (data.session) await enterApp(data.session.access_token);
       else setMsg({ ok: true, text: "Conta criada. Confirme pelo link enviado ao seu e-mail." });
     }
   }

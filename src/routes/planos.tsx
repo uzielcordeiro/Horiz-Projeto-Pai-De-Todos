@@ -10,7 +10,7 @@ export const Route = createFileRoute("/planos")({
   ssr: false,
   beforeLoad: async () => {
     const res = await loadAccount();
-    if (res.account.status === "active") throw redirect({ to: "/" });
+    if (res.account.status === "active") throw redirect({ to: "/app" });
     return res;
   },
   head: () => ({

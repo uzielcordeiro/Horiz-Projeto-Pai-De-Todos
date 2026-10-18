@@ -1,3 +1,9 @@
+# Home
+- [x] Abrir checkout diretamente pelos botões mensal/anual, sem exigir login; ambos verificados no Stripe em ambiente de teste.
+- [x] Criar a home pública com o modelo enviado e preservar o aplicativo e login.
+- [x] Conectar os botões aos preços mensal/anual e conferir navegação.
+- [ ] Ativar pagamentos reais e liberação automática da assinatura (aguarda configuração live, assinatura dos avisos Stripe e administrador da conta existente).
+
 # Temas
 - [x] Adicionar lua/sol ao lado do título e aplicar temas em todas as abas e janelas.
 - [x] Ampliar o botão lua/sol (48×56, símbolo 32 px) desbloqueando o tamanho fixo de 16 px dos ícones do botão, sem fundo próprio.

@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { PLANS } from "@/lib/plans";
 
 export const PLAN_PRICES = {
-  monthly: "price_1UQyygIAIPw2F9ku9aP2Bu7G",
-  yearly: "price_1UQz0gIAIPw2F9kumCop2W12",
+  monthly: PLANS.monthly.priceId,
+  yearly: PLANS.yearly.priceId,
 } as const;
 
 async function admin() {
@@ -57,9 +58,11 @@ export const saveProfile = createServerFn({ method: "POST" })
   });
 
 export const createCheckout = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => tokenSchema.extend({ plan: z.enum(["monthly", "yearly"]), origin: z.string().url() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(10).optional(), plan: z.enum(["monthly", "yearly"]), origin: z.string().url() }).parse(d))
   .handler(async ({ data }) => {
-    const { user } = await verifyUser(data.token);
+    // Public landing checkout needs no session. Existing authenticated callers
+    // still associate the subscription with their verified account.
+    const user = data.token ? (await verifyUser(data.token)).user : undefined;
     const key = process.env["STRIPE_SECRET_KEY"];
     if (!key) throw new Error("STRIPE_SECRET_KEY ausente");
     // Payment methods are managed in the Stripe Dashboard (dynamic payment methods).
@@ -67,13 +70,15 @@ export const createCheckout = createServerFn({ method: "POST" })
       mode: "subscription",
       "line_items[0][price]": PLAN_PRICES[data.plan],
       "line_items[0][quantity]": "1",
-      client_reference_id: user.id,
-      "metadata[user_id]": user.id,
-      "subscription_data[metadata][user_id]": user.id,
-      success_url: `${data.origin}/?checkout=sucesso`,
-      cancel_url: `${data.origin}/planos`,
+      success_url: `${data.origin}/app?checkout=sucesso`,
+      cancel_url: `${data.origin}/#planos`,
     });
-    if (user.email) p.set("customer_email", user.email);
+    if (user) {
+      p.set("client_reference_id", user.id);
+      p.set("metadata[user_id]", user.id);
+      p.set("subscription_data[metadata][user_id]", user.id);
+      if (user.email) p.set("customer_email", user.email);
+    }
     const res = (await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
@@ -81,7 +86,7 @@ export const createCheckout = createServerFn({ method: "POST" })
     }).then((r) => r.json())) as { url?: string; error?: { message: string } };
     if (!res.url) {
       console.error("Stripe checkout error:", res.error?.message);
-      throw new Error(res.error?.message ?? "Falha ao criar checkout");
+      throw new Error("Não foi possível abrir o pagamento. Tente novamente em instantes.");
     }
     return { url: res.url };
   });

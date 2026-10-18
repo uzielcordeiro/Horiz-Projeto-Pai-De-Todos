@@ -36,7 +36,7 @@ function ResetPasswordPage() {
     setBusy(false);
     if (error) return setMsg({ ok: false, text: error.message });
     setMsg({ ok: true, text: "Senha atualizada. Entrando…" });
-    setTimeout(() => navigate({ to: "/", replace: true }), 1200);
+    setTimeout(() => navigate({ to: "/app", replace: true }), 1200);
   }
 
   const input = "h-11 w-full rounded-lg border border-input bg-background px-3 pr-11 text-foreground outline-none focus:border-primary";

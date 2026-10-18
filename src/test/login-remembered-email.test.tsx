@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginPage } from "@/routes/login";
+vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
+vi.mock("@/lib/billing.functions", () => ({ createCheckout: vi.fn() }));
 
 const { navigate, signInWithPassword } = vi.hoisted(() => ({
   navigate: vi.fn(),
