@@ -15,11 +15,12 @@ const SUPPORT_EMAIL = "suporte@horiz.app";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>): { plan?: Plan; tab?: string; email?: string } => {
+  validateSearch: (search: Record<string, unknown>): { plan?: Plan; tab?: string; email?: string; session_id?: string } => {
     const plan = parsePlan(search["plan"]);
     const tab = typeof search["tab"] === "string" ? search["tab"] : undefined;
     const email = typeof search["email"] === "string" ? search["email"] : undefined;
-    return { ...(plan ? { plan } : {}), ...(tab ? { tab } : {}), ...(email ? { email } : {}) };
+    const session_id = typeof search["session_id"] === "string" ? search["session_id"] : undefined;
+    return { ...(plan ? { plan } : {}), ...(tab ? { tab } : {}), ...(email ? { email } : {}), ...(session_id ? { session_id } : {}) };
   },
   head: () => ({
     meta: [
