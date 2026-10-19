@@ -60,17 +60,19 @@ export const saveProfile = createServerFn({ method: "POST" })
 export const createCheckout = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: z.string().min(10).optional(), plan: z.enum(["monthly", "yearly"]), origin: z.string().url() }).parse(d))
   .handler(async ({ data }) => {
-    // Public landing checkout needs no session. Existing authenticated callers
-    // still associate the subscription with their verified account.
     const user = data.token ? (await verifyUser(data.token)).user : undefined;
     const key = process.env["STRIPE_SECRET_KEY"];
     if (!key) throw new Error("STRIPE_SECRET_KEY ausente");
-    // Payment methods are managed in the Stripe Dashboard (dynamic payment methods).
+
+    const successUrl = user?.email
+      ? `${data.origin}/login?tab=register&email=${encodeURIComponent(user.email)}`
+      : `${data.origin}/login?tab=register`;
+
     const p = new URLSearchParams({
       mode: "subscription",
       "line_items[0][price]": PLAN_PRICES[data.plan],
       "line_items[0][quantity]": "1",
-      success_url: `${data.origin}/app?checkout=sucesso`,
+      success_url: successUrl,
       cancel_url: `${data.origin}/#planos`,
     });
     if (user) {
