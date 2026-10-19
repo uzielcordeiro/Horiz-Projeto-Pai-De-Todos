@@ -93,3 +93,23 @@ export const createCheckout = createServerFn({ method: "POST" })
     }
     return { url: res.url };
   });
+
+// Nova função para buscar o e-mail diretamente no Stripe usando o session_id
+export const getCheckoutSessionEmail = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ sessionId: z.string().min(5) }).parse(d))
+  .handler(async ({ data }) => {
+    const key = process.env["STRIPE_SECRET_KEY"];
+    if (!key) throw new Error("STRIPE_SECRET_KEY ausente");
+
+    const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${data.sessionId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${key}` },
+    }).then((r) => r.json()) as { customer_details?: { email?: string }; customer_email?: string; error?: { message: string } };
+
+    if (res.error) {
+      throw new Error(res.error.message);
+    }
+
+    const email = res.customer_details?.email || res.customer_email || "";
+    return { email };
+  });
