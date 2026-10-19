@@ -15,9 +15,11 @@ const SUPPORT_EMAIL = "suporte@horiz.app";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>): { plan?: Plan } => {
+  validateSearch: (search: Record<string, unknown>): { plan?: Plan; tab?: string; email?: string } => {
     const plan = parsePlan(search["plan"]);
-    return plan ? { plan } : {};
+    const tab = typeof search["tab"] === "string" ? search["tab"] : undefined;
+    const email = typeof search["email"] === "string" ? search["email"] : undefined;
+    return { ...(plan ? { plan } : {}), ...(tab ? { tab } : {}), ...(email ? { email } : {}) };
   },
   head: () => ({
     meta: [
@@ -47,16 +49,37 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setSelectedPlan(parsePlan(new URLSearchParams(window.location.search).get("plan")));
-    try {
-      const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? localStorage.getItem(LEGACY_EMAIL_KEY);
-      if (saved) {
-        setEmail(saved);
-        localStorage.setItem(REMEMBERED_EMAIL_KEY, saved);
-        localStorage.removeItem(LEGACY_EMAIL_KEY);
+    const params = new URLSearchParams(window.location.search);
+    setSelectedPlan(parsePlan(params.get("plan")));
+
+    // Define a aba inicial com base no parâmetro 'tab' da URL
+    const urlTab = params.get("tab");
+    if (urlTab === "register" || urlTab === "up" || urlTab === "cadastrar") {
+      setMode("up");
+    } else if (urlTab === "login" || urlTab === "in" || urlTab === "entrar") {
+      setMode("in");
+    }
+
+    // Leitura e sanitização segura do e-mail da URL (ou recuperação do localStorage)
+    const rawEmail = params.get("email");
+    if (rawEmail) {
+      try {
+        setEmail(decodeURIComponent(rawEmail).trim());
+      } catch {
+        setEmail(rawEmail.trim());
       }
-      setRemember(localStorage.getItem(REMEMBER_KEY) !== "0");
-    } catch { /* ignore */ }
+    } else {
+      try {
+        const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? localStorage.getItem(LEGACY_EMAIL_KEY);
+        if (saved) {
+          setEmail(saved);
+          localStorage.setItem(REMEMBERED_EMAIL_KEY, saved);
+          localStorage.removeItem(LEGACY_EMAIL_KEY);
+        }
+      } catch { /* ignore */ }
+    }
+
+    setRemember(localStorage.getItem(REMEMBER_KEY) !== "0");
   }, []);
 
   function switchMode(m: typeof mode) { setMode(m); setMsg(null); }
@@ -99,13 +122,16 @@ export function LoginPage() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName.trim(), whatsapp: whatsapp.trim() }, emailRedirectTo: selectedPlan ? `${window.location.origin}/login?plan=${selectedPlan}` : `${window.location.origin}/app` },
+        options: { 
+          data: { full_name: fullName.trim(), whatsapp: whatsapp.trim() }, 
+          emailRedirectTo: `${window.location.origin}/login?tab=login&email=${encodeURIComponent(email)}` 
+        },
       });
       setBusy(false);
       if (error) return setMsg({ ok: false, text: error.message });
       try { localStorage.setItem(REMEMBERED_EMAIL_KEY, email); } catch { /* ignore */ }
       if (data.session) await enterApp(data.session.access_token);
-      else setMsg({ ok: true, text: "Conta criada. Confirme pelo link enviado ao seu e-mail." });
+      else setMsg({ ok: true, text: "Cadastro realizado com sucesso! Verifique o link enviado para o seu e-mail." });
     }
   }
 
@@ -171,7 +197,11 @@ export function LoginPage() {
               <button type="button" className={link} onClick={() => switchMode("forgot")}>Esqueci minha senha</button>
             </div>
           )}
-          {msg && <p className={`text-sm ${msg.ok ? "text-foreground" : "text-destructive"}`}>{msg.text}</p>}
+          {msg && (
+            <div className={`rounded-lg border p-3 text-sm ${msg.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+              {msg.text}
+            </div>
+          )}
           {!supabaseConfigured && <p className="text-sm text-destructive">Conexão com o Supabase ainda não configurada.</p>}
           <Button type="submit" className="w-full" disabled={busy}>
             {mode === "in" ? "entrar" : mode === "up" ? "cadastrar" : "enviar link"}
