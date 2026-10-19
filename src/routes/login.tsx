@@ -5,7 +5,7 @@ import { supabaseConfigured, REMEMBER_KEY } from "@/integrations/supabase/extras
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { parsePlan, type Plan } from "@/lib/plans";
-import { createCheckout } from "@/lib/billing.functions";
+import { createCheckout, getCheckoutSessionEmail } from "@/lib/billing.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 const REMEMBERED_EMAIL_KEY = "remembered_email";
@@ -38,6 +38,8 @@ export const Route = createFileRoute("/login")({
 export function LoginPage() {
   const navigate = useNavigate();
   const checkout = useServerFn(createCheckout);
+  const fetchSessionEmail = useServerFn(getCheckoutSessionEmail);
+
   const [selectedPlan, setSelectedPlan] = useState<Plan | undefined>();
   const [mode, setMode] = useState<"in" | "up" | "forgot">("in");
   const [email, setEmail] = useState("");
@@ -61,14 +63,30 @@ export function LoginPage() {
       setMode("in");
     }
 
-    // Leitura e sanitização segura do e-mail da URL (ou recuperação do localStorage)
+    // Leitura e sanitização segura do e-mail da URL, session_id ou recuperação do localStorage
     const rawEmail = params.get("email");
+    const sessionId = params.get("session_id");
+
     if (rawEmail) {
       try {
         setEmail(decodeURIComponent(rawEmail).trim());
       } catch {
         setEmail(rawEmail.trim());
       }
+    } else if (sessionId) {
+      setBusy(true);
+      fetchSessionEmail({ data: { sessionId } })
+        .then((res) => {
+          if (res?.email) {
+            setEmail(res.email.trim());
+          }
+        })
+        .catch(() => {
+          // Fallback silencioso em caso de erro na consulta ao Stripe
+        })
+        .finally(() => {
+          setBusy(false);
+        });
     } else {
       try {
         const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? localStorage.getItem(LEGACY_EMAIL_KEY);
@@ -81,7 +99,7 @@ export function LoginPage() {
     }
 
     setRemember(localStorage.getItem(REMEMBER_KEY) !== "0");
-  }, []);
+  }, [fetchSessionEmail]);
 
   function switchMode(m: typeof mode) { setMode(m); setMsg(null); }
 
