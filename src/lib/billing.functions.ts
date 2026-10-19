@@ -64,9 +64,10 @@ export const createCheckout = createServerFn({ method: "POST" })
     const key = process.env["STRIPE_SECRET_KEY"];
     if (!key) throw new Error("STRIPE_SECRET_KEY ausente");
 
+    // Se houver usuário logado, usa o e-mail dele. Se for checkout público, injeta session_id do Stripe
     const successUrl = user?.email
       ? `${data.origin}/login?tab=register&email=${encodeURIComponent(user.email)}`
-      : `${data.origin}/login?tab=register`;
+      : `${data.origin}/login?tab=register&session_id={CHECKOUT_SESSION_ID}`;
 
     const p = new URLSearchParams({
       mode: "subscription",
