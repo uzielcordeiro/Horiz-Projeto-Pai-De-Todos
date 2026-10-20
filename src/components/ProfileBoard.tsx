@@ -29,19 +29,44 @@ export function ProfileBoard() {
   const { signingOut, signOut } = useSignOut();
   const [profile, setProfile] = useState({ name: "", email: "", whatsapp: "" });
   const [saveErr, setSaveErr] = useState<string | null>(null);
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
-      const token = data.session?.access_token;
-      if (!token) return;
-      const a = await getAccount({ data: { token } });
-      setProfile({ name: a.full_name, email: a.email, whatsapp: a.whatsapp });
+      const session = data.session;
+      if (!session) return;
+
+      const sessionEmail = session.user?.email ?? "";
+      const sessionName = session.user?.user_metadata?.full_name ?? sessionEmail;
+
+      // Define os dados imediatamente usando a sessão local do Supabase
+      setProfile((prev) => ({
+        ...prev,
+        name: sessionName,
+        email: sessionEmail,
+      }));
+
+      // Busca dados complementares do servidor sem travar a interface
+      try {
+        const token = session.access_token;
+        if (token) {
+          const a = await getAccount({ data: { token } });
+          setProfile({
+            name: a.full_name || sessionName,
+            email: a.email || sessionEmail,
+            whatsapp: a.whatsapp || "",
+          });
+        }
+      } catch {
+        /* fallback para os dados já carregados da sessão */
+      }
     }).catch(() => {});
   }, []);
+
   const [draft, setDraft] = useState(profile);
   const [selected, setSelected] = useState<OptionKey | null>(null);
   const option = OPTIONS.find((item) => item.key === selected);
 
-  // "sair" fecha a sessão, mostra "Saindo..." por um instante e então segue
+  // "sair" fecha a sessão, mostra "Saindo..." por um instante e segue
   // para /login com replace — o Voltar do navegador não reabre a área logada.
   function handleSignOut() {
     setSelected(null);
