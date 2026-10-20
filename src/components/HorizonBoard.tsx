@@ -26,7 +26,6 @@ const cell: Record<Status, string> = {
   negativeDeep: "bg-horizon-debt-cell text-negative-deep-text",
 };
 
-
 /** mesmas cores dos dias do quadro, na ordem vermelho → amarelo → verde-claro → verde-escuro */
 const legend: { label: string; dotClass: string }[] = [
   { label: "negativo", dotClass: "bg-horizon-negative-cell" },
@@ -35,8 +34,6 @@ const legend: { label: string; dotClass: string }[] = [
   { label: "R$ 1.000 até R$ 2.000", dotClass: "bg-horizon-positive-cell" },
   { label: "acima de R$ 2.000", dotClass: "bg-surplus" },
 ];
-
-
 
 type Props = {
   months: HorizonMonth[];
@@ -87,7 +84,6 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
         {!last && <ColumnTick />}
       </button>
       <div className="divide-y divide-border">
-
         {Array.from({ length: maxDays }, (_, i) => {
           const d = mo.days[i];
           if (!d)
@@ -157,8 +153,67 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
 
-  // Desenha apenas as colunas na área visível (mais uma folga). Com ~120 meses
-  // no quadro, desenhar tudo de uma vez travava o clique no menu lateral.
+  // Trava de eixos ao arrastar (impede rolagem em diagonal)
+  const dragRef = useRef<{
+    isDragging: boolean;
+    startX: number;
+    startY: number;
+    scrollLeft: number;
+    scrollTop: number;
+    axis: "x" | "y" | null;
+  }>({
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0,
+    scrollTop: 0,
+    axis: null,
+  });
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    dragRef.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      scrollLeft: el.scrollLeft,
+      scrollTop: el.scrollTop,
+      axis: null,
+    };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    const el = scrollerRef.current;
+    if (!drag.isDragging || !el) return;
+
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+
+    // Define o eixo dominante no primeiro movimento significativo (> 5px)
+    if (!drag.axis) {
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        drag.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+      } else {
+        return;
+      }
+    }
+
+    // Aplica o movimento estritamente no eixo travado
+    if (drag.axis === "x") {
+      el.scrollLeft = drag.scrollLeft - dx;
+    } else if (drag.axis === "y") {
+      el.scrollTop = drag.scrollTop - dy;
+    }
+  };
+
+  const handlePointerUpOrLeave = () => {
+    dragRef.current.isDragging = false;
+    dragRef.current.axis = null;
+  };
+
+  // Desenha apenas as colunas na área visível (mais uma folga).
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -226,7 +281,11 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
       <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border">
         <div
           ref={scrollerRef}
-          className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUpOrLeave}
+          onPointerLeave={handlePointerUpOrLeave}
+          className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl select-none"
         >
           <div className="flex min-w-max">
             {from > 0 && <div aria-hidden className="shrink-0" style={{ width: from * COLUMN_WIDTH }} />}
@@ -247,7 +306,6 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
           </div>
         </div>
       </div>
-
     </section>
   );
 }
