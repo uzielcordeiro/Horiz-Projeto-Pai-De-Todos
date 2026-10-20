@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 type Item = { key: string; label: string; icon: React.ReactNode; soon?: boolean };
 
 const NAV: Item[] = [
-  { key: "perfil", label: "Perfil", icon: <UserRound size={16} strokeWidth={2} /> },
-  { key: "saldos", label: "Saldos", icon: <Wallet size={16} strokeWidth={2} /> },
-  { key: "totais", label: "Totais", icon: <Table2 size={16} strokeWidth={2} /> },
+  { key: "perfil", label: "Conta", icon: <UserRound size={16} strokeWidth={2} /> },
+  { key: "saldos", label: "Calendário", icon: <Wallet size={16} strokeWidth={2} /> },
+  { key: "totais", label: "Resumo", icon: <Table2 size={16} strokeWidth={2} /> },
   { key: "tags", label: "Tags", icon: <Tag size={16} strokeWidth={2} /> },
-  { key: "menu", label: "Diário", icon: <NotebookPen size={16} strokeWidth={2} /> },
+  { key: "menu", label: "Dia/Dia", icon: <NotebookPen size={16} strokeWidth={2} /> },
 ];
 
 export function AppSidebar({
@@ -81,7 +81,7 @@ export function AppSidebar({
         </button>
         {open && (
           <span className="truncate font-display text-sm font-semibold text-foreground">
-            linha do tempo
+            Menu
           </span>
         )}
       </div>
@@ -116,32 +116,32 @@ export function AppSidebar({
           data-sidebar-action="adicionar"
           onPointerDown={activatePointer("adicionar", onAdd)}
           onClick={activateClick("adicionar", onAdd)}
-          aria-label="adicionar"
-          title="adicionar"
+          aria-label="Novo"
+          title="Novo"
           className={`${row} text-foreground hover:bg-accent/60`}
         >
           <span className="flex w-4 shrink-0 justify-center"><Plus size={16} strokeWidth={2} /></span>
-          {open && <span className="truncate">adicionar</span>}
+          {open && <span className="truncate">Novo</span>}
         </button>
         <button
           type="button"
           data-sidebar-action="hoje"
           onPointerDown={activatePointer("hoje", onToday)}
           onClick={activateClick("hoje", onToday)}
-          aria-label="ir pra hoje"
-          title="ir pra hoje"
+          aria-label="Hoje"
+          title="Hoje"
           className={`${row} text-muted-foreground hover:bg-accent/60 hover:text-foreground`}
         >
           <span className="flex w-4 shrink-0 justify-center"><Target size={16} strokeWidth={2} /></span>
-          {open && <span className="truncate">ir pra hoje</span>}
+          {open && <span className="truncate">Hoje</span>}
         </button>
         <button
           type="button"
           data-sidebar-action="horizonte"
           onPointerDown={activatePointer("horizonte", () => onNavigate?.("horizonte"))}
           onClick={activateClick("horizonte", () => onNavigate?.("horizonte"))}
-          aria-label="horizonte"
-          title="horizonte"
+          aria-label="Futuro"
+          title="Futuro"
           className={`${row} ${
             active === "horizonte"
               ? "bg-accent text-accent-foreground"
@@ -149,7 +149,7 @@ export function AppSidebar({
           }`}
         >
           <span className="flex w-4 shrink-0 justify-center"><MapIcon size={16} strokeWidth={2} /></span>
-          {open && <span className="truncate">Horizonte</span>}
+          {open && <span className="truncate">Futuro</span>}
         </button>
       </div>
 

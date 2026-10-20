@@ -60,17 +60,20 @@ export const saveProfile = createServerFn({ method: "POST" })
 export const createCheckout = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: z.string().min(10).optional(), plan: z.enum(["monthly", "yearly"]), origin: z.string().url() }).parse(d))
   .handler(async ({ data }) => {
-    // Public landing checkout needs no session. Existing authenticated callers
-    // still associate the subscription with their verified account.
     const user = data.token ? (await verifyUser(data.token)).user : undefined;
     const key = process.env["STRIPE_SECRET_KEY"];
     if (!key) throw new Error("STRIPE_SECRET_KEY ausente");
-    // Payment methods are managed in the Stripe Dashboard (dynamic payment methods).
+
+    // Se houver usuário logado, usa o e-mail dele. Se for checkout público, injeta session_id do Stripe
+    const successUrl = user?.email
+      ? `${data.origin}/login?tab=register&email=${encodeURIComponent(user.email)}`
+      : `${data.origin}/login?tab=register&session_id={CHECKOUT_SESSION_ID}`;
+
     const p = new URLSearchParams({
       mode: "subscription",
       "line_items[0][price]": PLAN_PRICES[data.plan],
       "line_items[0][quantity]": "1",
-      success_url: `${data.origin}/app?checkout=sucesso`,
+      success_url: successUrl,
       cancel_url: `${data.origin}/#planos`,
     });
     if (user) {
@@ -89,4 +92,24 @@ export const createCheckout = createServerFn({ method: "POST" })
       throw new Error("Não foi possível abrir o pagamento. Tente novamente em instantes.");
     }
     return { url: res.url };
+  });
+
+// Nova função para buscar o e-mail diretamente no Stripe usando o session_id
+export const getCheckoutSessionEmail = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ sessionId: z.string().min(5) }).parse(d))
+  .handler(async ({ data }) => {
+    const key = process.env["STRIPE_SECRET_KEY"];
+    if (!key) throw new Error("STRIPE_SECRET_KEY ausente");
+
+    const res = await fetch(`https://api.stripe.com/v1/checkout/sessions/${data.sessionId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${key}` },
+    }).then((r) => r.json()) as { customer_details?: { email?: string }; customer_email?: string; error?: { message: string } };
+
+    if (res.error) {
+      throw new Error(res.error.message);
+    }
+
+    const email = res.customer_details?.email || res.customer_email || "";
+    return { email };
   });

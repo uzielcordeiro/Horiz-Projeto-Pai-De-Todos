@@ -2,7 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LandingPage } from "@/components/LandingPage";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [
+  head: () => ({ scripts: [
+    // A landing abre no topo: a âncora é removida da URL antes de o navegador
+    // rolar até ela, então o scroll só acontece ao clicar em "Planos".
+    { children: 'if(location.hash){history.replaceState(null,"",location.pathname+location.search)}' },
+  ], meta: [
     { title: "Horiz — O seu GPS Financeiro" },
     { name: "description", content: "Suas contas olhando para frente. Conheça o calendário financeiro Horiz e escolha seu plano mensal ou anual." },
     { property: "og:title", content: "Horiz — O seu GPS Financeiro" },

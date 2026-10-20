@@ -395,15 +395,17 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   letter-spacing: 0;
 }
+/* Anchor jumps on the home glide instead of snapping; the app keeps its own scrolling. */
+@media (prefers-reduced-motion: no-preference) { html:has(.landing) { scroll-behavior: smooth; } }
 .landing h1, .landing h2, .landing h3 { font-family: inherit; letter-spacing: 0; }
 .landing-header { position: fixed; inset: 0 0 auto; z-index: 30; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 48px; background: color-mix(in srgb, var(--background) 90%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
 .landing-logo { display: flex; align-items: center; gap: 14px; font-size: 24px; font-weight: 800; }
 .landing-monogram { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); }
-.landing-header nav { display: flex; align-items: center; gap: 16px; }
-.landing .landing-nav-link { color: var(--foreground); font-size: 16px; }
+.landing-header nav { --landing-nav-button-width: 178px; display: flex; align-items: center; gap: 16px; }
 .landing .landing-button { border-radius: 8px; font-weight: 600; background: var(--primary); color: var(--primary-foreground); box-shadow: none; }
 .landing .landing-button:hover { opacity: .9; }
-.landing .landing-login { height: 46px; padding: 0 24px; font-size: 16px; }
+/* Both header buttons share one box: same font, colour, padding, width and height. */
+.landing .landing-login { width: var(--landing-nav-button-width); height: 46px; padding: 0 24px; font-size: 16px; }
 .landing-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 160px 24px 110px; min-height: min(800px, 90svh); text-align: center; }
 .landing-hero h1 { max-width: 850px; font-size: 64px; font-weight: 750; line-height: 1.05; margin-bottom: 24px; }
 .landing-hero p { max-width: 580px; font-size: 20px; line-height: 1.5; color: var(--muted-foreground); margin-bottom: 40px; }
@@ -423,7 +425,7 @@
 .landing-preview-cell { display: grid; grid-template-columns: 30px 1fr; height: 29px; font-size: 11px; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; align-items: center; }
 .landing-preview-cell > span { display: grid; place-items: center; height: 100%; background: color-mix(in srgb, var(--background) 65%, transparent); color: var(--muted-foreground); }
 .landing-preview-cell > strong { text-align: right; padding: 0 12px; }
-.landing-pricing { scroll-margin-top: 86px; padding: 110px 24px 100px; text-align: center; }
+.landing-pricing { scroll-margin-top: 96px; padding: 110px 24px 100px; text-align: center; }
 .landing-subtitle { color: var(--muted-foreground); font-size: 18px; margin-bottom: 48px; }
 .landing-pricing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 850px; margin: auto; }
 .landing-price-card { display: flex; flex-direction: column; position: relative; padding: 40px 32px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--landing-card-shadow); text-align: left; }
@@ -441,16 +443,16 @@
 .landing-error { color: var(--destructive); margin-top: 24px; }
 @media (max-width: 768px) {
   .landing-header { padding: 16px 20px; }
-  .landing-header nav { gap: 4px; }
+  .landing-header nav { --landing-nav-button-width: 120px; gap: 4px; }
   .landing-logo { gap: 8px; font-size: 21px; }
   .landing-monogram { width: 38px; height: 38px; }
-  .landing .landing-login { height: 40px; padding: 0 12px; font-size: 14px; }
-  .landing .landing-nav-link { padding: 0 10px; font-size: 14px; }
+  .landing .landing-login { width: var(--landing-nav-button-width); height: 40px; padding: 0 12px; font-size: 14px; }
   .landing-login svg { display: none; }
   .landing-hero { padding: 140px 20px 90px; min-height: 80svh; }
   .landing-hero h1 { font-size: 44px; }
   .landing-showcase h2, .landing-pricing h2 { font-size: 36px; }
   .landing-showcase, .landing-pricing { padding: 72px 20px; }
+  .landing-pricing { scroll-margin-top: 80px; }
   .landing-pricing-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; max-width: 430px; }
   .landing-price-card { padding: 32px 24px; }
   .landing-preview-top { gap: 14px; padding: 14px; }

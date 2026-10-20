@@ -16,4 +16,33 @@ describe("checkout direto da home", () => {
     fireEvent.click(screen.getByRole("button", { name: label }));
     await waitFor(() => expect(checkout).toHaveBeenCalledWith({ data: { plan, origin: window.location.origin } }));
   });
+
+  it("não deixa o clique em um plano vazar para os pais do card", () => {
+    const onParentClick = vi.fn();
+    render(<div onClick={onParentClick}><LandingPage /></div>);
+    fireEvent.click(screen.getByRole("button", { name: "Assinar Mensal" }));
+    expect(onParentClick).not.toHaveBeenCalled();
+  });
+
+  it("o plano em aberto não desativa o botão do outro plano", async () => {
+    checkout.mockImplementation(() => new Promise(() => {}));
+    render(<LandingPage />);
+    const mensal = screen.getByRole<HTMLButtonElement>("button", { name: "Assinar Mensal" });
+    const anual = screen.getByRole<HTMLButtonElement>("button", { name: "Assinar Anual" });
+    fireEvent.click(mensal);
+    await waitFor(() => expect(checkout).toHaveBeenCalledTimes(1));
+    expect(mensal.disabled).toBe(true);
+    expect(anual.disabled).toBe(false);
+  });
+
+  it("o plano em aberto não bloqueia o checkout do outro plano", async () => {
+    checkout.mockImplementation(() => new Promise(() => {}));
+    render(<LandingPage />);
+    const mensal = screen.getByRole<HTMLButtonElement>("button", { name: "Assinar Mensal" });
+    const anual = screen.getByRole<HTMLButtonElement>("button", { name: "Assinar Anual" });
+    fireEvent.click(mensal);
+    fireEvent.click(anual);
+    await waitFor(() => expect(checkout).toHaveBeenCalledTimes(2));
+    expect(checkout).toHaveBeenLastCalledWith({ data: { plan: "yearly", origin: window.location.origin } });
+  });
 });

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { ArrowUpRight, Check, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createCheckout } from "@/lib/billing.functions";
@@ -11,8 +11,37 @@ export function LandingPage() {
   const [busy, setBusy] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function subscribe(plan: Plan) {
-    if (busy) return;
+  // A landing abre sempre no topo, parada no cabeçalho: qualquer âncora na URL
+  // é removida e a rolagem volta ao início sem animação — inclusive quando a
+  // página é recarregada no meio ou no fim. O scroll só acontece quando o
+  // visitante clica em "Planos" ou em "Quero Fazer Parte".
+  useEffect(() => {
+    const html = document.documentElement;
+    const previousBehavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = "instant";
+    if (window.location.hash) {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    window.scrollTo(0, 0);
+    html.style.scrollBehavior = previousBehavior;
+  }, []);
+
+  function goToPlanos(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    const section = document.getElementById("planos");
+    if (!section) return;
+    const rect = section.getBoundingClientRect();
+    const sectionTop = rect.top + window.scrollY;
+    const headerOffset = window.innerWidth <= 900 ? 80 : 96;
+    const pageBottom = document.documentElement.scrollHeight - window.innerHeight;
+    const target = Math.max(sectionTop - headerOffset, pageBottom);
+    window.scrollTo({ top: target, behavior: "smooth" });
+  }
+
+  async function subscribe(plan: Plan, event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (busy === plan) return;
     setBusy(plan);
     setError(null);
     try {
@@ -28,7 +57,7 @@ export function LandingPage() {
       <header className="landing-header">
         <Link to="/" className="landing-logo" aria-label="Horiz — início"><span className="landing-monogram">H</span><span>Horiz</span></Link>
         <nav aria-label="Navegação principal">
-          <Button variant="ghost" asChild className="landing-nav-link"><a href="#planos">Planos</a></Button>
+          <Button asChild className="landing-button landing-login"><a href="#planos" onClick={goToPlanos}>Planos</a></Button>
           <Button asChild className="landing-button landing-login"><Link to="/login">Já sou aluno <ArrowUpRight /></Link></Button>
         </nav>
       </header>
@@ -36,7 +65,7 @@ export function LandingPage() {
       <section className="landing-hero">
         <h1>Controle o futuro das suas finanças com Horiz</h1>
         <p>Suas contas olhando para frente e nunca mais para trás</p>
-        <Button asChild className="landing-button landing-cta"><a href="#planos">Quero Fazer Parte <ArrowUpRight /></a></Button>
+        <Button asChild className="landing-button landing-cta"><a href="#planos" onClick={goToPlanos}>Quero Fazer Parte <ArrowUpRight /></a></Button>
       </section>
 
       <section className="landing-showcase">
@@ -55,7 +84,7 @@ export function LandingPage() {
             <div className="landing-price">R$ 27,00 <span>/mês</span></div>
             <div className="landing-subprice" aria-hidden="true">&nbsp;</div>
             <ul>{["Acesso completo ao painel e calendário", "Gestão descomplicada de entradas e saídas", "Suporte dedicado"].map(text => <li key={text}><Check />{text}</li>)}</ul>
-            <Button className="landing-button landing-plan-button" disabled={busy !== null} onClick={() => void subscribe("monthly")}>{busy === "monthly" ? <><LoaderCircle className="animate-spin" /> abrindo…</> : "Assinar Mensal"}</Button>
+            <Button className="landing-button landing-plan-button" disabled={busy === "monthly"} onClick={(e) => void subscribe("monthly", e)}>{busy === "monthly" ? <><LoaderCircle className="animate-spin" /> abrindo…</> : "Assinar Mensal"}</Button>
           </article>
           <article className="landing-price-card landing-featured">
             <span className="landing-badge">Mais Popular</span>
@@ -64,7 +93,7 @@ export function LandingPage() {
             <div className="landing-price">R$ 302,00</div>
             <div className="landing-subprice">à vista (equivalente a R$ 25,17 /mês)</div>
             <ul>{["Economia de 7% em relação ao plano mensal", "Painel completo de saldos e calendário", "Atualizações contínuas do app"].map(text => <li key={text}><Check />{text}</li>)}</ul>
-            <Button className="landing-button landing-plan-button" disabled={busy !== null} onClick={() => void subscribe("yearly")}>{busy === "yearly" ? <><LoaderCircle className="animate-spin" /> abrindo…</> : "Assinar Anual"}</Button>
+            <Button className="landing-button landing-plan-button" disabled={busy === "yearly"} onClick={(e) => void subscribe("yearly", e)}>{busy === "yearly" ? <><LoaderCircle className="animate-spin" /> abrindo…</> : "Assinar Anual"}</Button>
           </article>
         </div>
         {error && <p role="alert" className="landing-error">{error}</p>}
