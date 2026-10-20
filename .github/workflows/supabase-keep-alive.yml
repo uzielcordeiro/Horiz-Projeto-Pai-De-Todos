@@ -1,0 +1,21 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Roda automaticamente a cada 3 dias para garantir que o banco nunca pause
+    - cron: '0 9 */3 * *'
+  workflow_dispatch: # Permite que você clique em um botão para testar manualmente quando quiser
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Ping to Supabase API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          curl -i -X GET \
+            "$SUPABASE_URL/rest/v1/" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY"
