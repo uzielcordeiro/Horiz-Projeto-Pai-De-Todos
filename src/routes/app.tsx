@@ -91,7 +91,6 @@ type Entry = {
   horizonTransfer?: boolean;
 };
 
-
 const STORAGE_KEY = "timeline-entries-v1";
 const REC_KEY = "timeline-recurrences-v1";
 const FORECAST_KEY = "timeline-forecast-v1";
@@ -128,7 +127,6 @@ const TAG_SUGGESTIONS = [
   "lazer",
   "investimento",
 ];
-
 
 const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -177,7 +175,6 @@ function parseAmount(input: string) {
   const n = Number(input.replace(/\s|R\$/g, "").replace(/\./g, "").replace(",", "."));
   return Number.isFinite(n) ? n : NaN;
 }
-
 
 const balanceSign = (kind: Kind, horizonTransfer?: boolean): 1 | -1 | 0 => {
   if (kind === "economias" && horizonTransfer) return -1;
@@ -291,8 +288,6 @@ function Index() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Verifica a sessão uma única vez após montar: com usuário, abre o painel;
-  // sem usuário, vai para o login.
   useEffect(() => {
     let cancelled = false;
     void supabase.auth.getSession().then(({ data }) => {
@@ -304,7 +299,6 @@ function Index() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!userId) return <LoadingScreen />;
@@ -334,11 +328,9 @@ function IndexForUser({ userId }: { userId: string }) {
   const canGoBack = cursor.y * 12 + cursor.m > today.getFullYear() * 12 + today.getMonth();
   const calendarSwipeRef = useCalendarSwipe(shiftMonth, canGoBack, loaded && view === "saldos" && !adding);
 
-  // previsão gasto diário (menu)
   const [forecastItems, setForecastItems] = useState<ForecastItem[]>([]);
   const [forecastDivisor, setForecastDivisor] = useState(30);
 
-  // mapa de tags: independente dos lançamentos (renomear/apagar não mexe em valores)
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [deletedTags, setDeletedTags] = useState<string[]>([]);
 
@@ -348,17 +340,14 @@ function IndexForUser({ userId }: { userId: string }) {
   const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // data livre do lançamento (passado ou futuro, qualquer ano)
   const [formDate, setFormDate] = useState(() =>
     iso(today.getFullYear(), today.getMonth(), today.getDate()),
   );
 
-  // etiquetas
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [showCal, setShowCal] = useState(false);
 
-  // repetição / parcelas (disponível em todas as categorias)
   const [debtName, setDebtName] = useState("");
   const [freq, setFreq] = useState<Freq>("unico");
   const [infinite, setInfinite] = useState(false);
@@ -366,14 +355,10 @@ function IndexForUser({ userId }: { userId: string }) {
   const installmentsRef = useRef<HTMLInputElement>(null);
   const [daysOfMonth, setDaysOfMonth] = useState<number[]>([]);
 
-
-  // histórico (desfazer) e seleção múltipla
   const [history, setHistory] = useState<{ entries: Entry[]; recurrences: Recurrence[] }[]>([]);
   const [selectMode, setSelectMode] = useState(false);
-  // edição completa de um lançamento já existente (mantém tudo, muda só o que você alterar)
   const [editTarget, setEditTarget] = useState<{ type: "entry" | "rec"; id: string } | null>(null);
   const [formOrigin, setFormOrigin] = useState<"standard" | "horizon">("standard");
-  // janela de ajuste no Horizonte — só abre quando se vem da origem de Economias no calendário
   const [horizonJump, setHorizonJump] = useState<{
     item: DayItem;
     amount: string;
@@ -381,7 +366,6 @@ function IndexForUser({ userId }: { userId: string }) {
     error: string | null;
   } | null>(null);
   const [horizonHighlight, setHorizonHighlight] = useState<string | null>(null);
-  /** O quadro do Horizonte é pesado: entra após o primeiro paint para o clique responder na hora. */
   const [selected, setSelected] = useState<Record<string, DayItem>>({});
   const [confirmAll, setConfirmAll] = useState<"mes" | "ano" | "tudo" | null>(null);
 
@@ -402,10 +386,7 @@ function IndexForUser({ userId }: { userId: string }) {
     });
   }
 
-
   useLayoutEffect(() => {
-    // Lê cada parte separadamente; se a principal falhar, tenta a cópia de segurança.
-    // Nunca deixa um defeito numa parte apagar as outras.
     adoptLegacyKeys(userId, [STORAGE_KEY, REC_KEY, FORECAST_KEY, FORECAST_DIVISOR_KEY, TAGS_KEY].flatMap((b) => [b, b + BACKUP_SUFFIX]));
     function readKey<T>(key: string, parse: (raw: string) => T): T | undefined {
       for (const k of [key, key + BACKUP_SUFFIX]) {
@@ -478,7 +459,6 @@ function IndexForUser({ userId }: { userId: string }) {
     write(K(TAGS_KEY), JSON.stringify({ custom: customTags, deleted: deletedTags }));
   }, [entries, recurrences, forecastItems, forecastDivisor, customTags, deletedTags, loaded]);
 
-  // sincroniza a previsão gasto diário como saída diária automática no calendário
   useEffect(() => {
     if (!loaded) return;
     const { monthly: monthlyBudget, weekly: weeklyBudget } = forecastBudgets(forecastItems);
@@ -522,7 +502,6 @@ function IndexForUser({ userId }: { userId: string }) {
       }
       return existing ? prev.filter((r) => r.id !== FORECAST_ID) : prev;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forecastItems, loaded]);
 
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
@@ -531,7 +510,7 @@ function IndexForUser({ userId }: { userId: string }) {
     () => computeMonthRows(entries, recurrences, cursor.y, cursor.m),
     [entries, recurrences, cursor],
   );
-  // Painéis vizinhos do carrossel: deslizam junto durante o arrasto.
+
   const prevCursor = shiftCalendarMonth(cursor, -1);
   const nextCursor = shiftCalendarMonth(cursor, 1);
   const prevRows = useMemo(
@@ -549,7 +528,6 @@ function IndexForUser({ userId }: { userId: string }) {
     return t;
   }, [rows]);
 
-  /** Dados da aba totais: previsão do Menu por dia, para o mês selecionado. */
   const totalsData = useMemo(() => {
     const diaryDays = rows.list.filter((r) => r.totals.diarios > 0).length;
     const { monthly: monthlyBudget, weekly: weeklyBudget } = forecastBudgets(forecastItems);
@@ -565,7 +543,6 @@ function IndexForUser({ userId }: { userId: string }) {
     return { totals: monthTotals, diaryDays, daysInMonth, forecastPerDay, savedTotal };
   }, [rows, monthTotals, cursor, daysInMonth, entries, recurrences, forecastItems]);
 
-  /** Lançamentos do mês por seção, para a lista detalhada da aba totais. */
   const totalsItems = useMemo(() => {
     const map = {} as Record<Kind, DayItem[]>;
     for (const k of KINDS) map[k.key] = [];
@@ -580,13 +557,11 @@ function IndexForUser({ userId }: { userId: string }) {
     year: "numeric",
   });
 
-  /** todas as tags em uso, de todos os lançamentos e repetições (espelho do calendário) */
   const tagRows = useMemo<TagRow[]>(() => {
     const untilEnd = iso(cursor.y, cursor.m, new Date(cursor.y, cursor.m + 1, 0).getDate());
     return summarizeTags(entries, recurrences, untilEnd);
   }, [entries, recurrences, cursor]);
 
-  /** Renomeia uma tag em todos os lançamentos (valores não mudam). */
   function renameTag(oldTag: string, newTag: string) {
     const swap = (list: string[]) => {
       const out: string[] = [];
@@ -603,7 +578,6 @@ function IndexForUser({ userId }: { userId: string }) {
     setTags((prev) => swap(prev));
   }
 
-  /** Apaga uma tag de todos os lançamentos (valores não mudam). */
   function deleteTag(tag: string) {
     const strip = <T extends { tags?: string[] }>(x: T): T =>
       x.tags?.includes(tag) ? { ...x, tags: x.tags.filter((t) => t !== tag) } : x;
@@ -612,15 +586,12 @@ function IndexForUser({ userId }: { userId: string }) {
     setTags((prev) => prev.filter((t) => t !== tag));
   }
 
-
   const horizonMonths = useMemo<HorizonMonth[]>(() => {
     const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
     const range = horizonMonthRange(horizonStart);
     if (range.length === 0) return [];
     const first = iso(range[0]!.y, range[0]!.m, 1);
 
-    // Uma única passada: saldo antes do horizonte vira abertura,
-    // o resto é acumulado por data para todo o intervalo de uma vez.
     let opening = 0;
     const byDate = new Map<string, number>();
     for (const e of sorted) {
@@ -668,7 +639,6 @@ function IndexForUser({ userId }: { userId: string }) {
     return out;
   }, [entries, recurrences, horizonStart]);
 
-
   const closingStatus = statusOf(rows.closing);
 
   function shiftMonth(delta: number) {
@@ -697,7 +667,6 @@ function IndexForUser({ userId }: { userId: string }) {
 
   function shiftDay(delta: number) {
     if (selectedDay == null) return;
-    // Typed but unsaved values must never carry over to another day.
     resetForm();
     setAdding(false);
     const d = new Date(cursor.y, cursor.m, selectedDay + delta);
@@ -707,7 +676,6 @@ function IndexForUser({ userId }: { userId: string }) {
 
   const selectedRow = selectedDay == null ? null : rows.list[selectedDay - 1] ?? null;
 
-  /** Uma linha de dia da tabela de saldos; nos painéis vizinhos é só visual. */
   function renderDayRow(row: MonthRows["list"][number], interactive: boolean) {
     const s = statusOf(row.balance);
     const open = interactive && selectedDay === row.day;
@@ -769,13 +737,11 @@ function IndexForUser({ userId }: { userId: string }) {
             const clickedKind = (ev.target as HTMLElement)
               .closest("[data-kind]")
               ?.getAttribute("data-kind") as Kind | "saldos" | null;
-            // clique fora de uma coluna (cantos/espaços): não abre nada
             if (!clickedKind) return;
             const openingKind = clickedKind;
             const categoryItems = row.items.filter(
               (item) => item.recurrenceId !== FORECAST_ID && item.kind === openingKind,
             );
-            // saldos e diários: só reflexo (manipulação nas outras colunas / no Menu)
             if (openingKind === "saldos") {
               setWindowKind("saldos");
               setEditTarget(null);
@@ -795,7 +761,6 @@ function IndexForUser({ userId }: { userId: string }) {
               setAdding(true);
               return;
             }
-            // poupança: sempre só reflexo (manipulação no Horizonte)
             if (openingKind === "economias") {
               setWindowKind("economias");
               setEditTarget(null);
@@ -844,7 +809,6 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  /** Um painel do carrossel: a tabela de saldos completa de um mês. */
   function renderMonthPanel(monthRows: MonthRows, interactive: boolean) {
     const totals = {} as Record<Kind, number>;
     for (const k of KINDS)
@@ -908,7 +872,6 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-
   function resetForm() {
     setAmount("");
     setLabel("");
@@ -926,7 +889,6 @@ function IndexForUser({ userId }: { userId: string }) {
   const fmtAmount = (n: number) =>
     n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  /** abre o formulário já preenchido com tudo que o lançamento tem hoje */
   function startFullEdit(item: DayItem) {
     setError(null);
     setShowCal(false);
@@ -971,7 +933,6 @@ function IndexForUser({ userId }: { userId: string }) {
   }
 
   function scrollTableToStart() {
-
     tableRef.current?.scrollTo({ left: 0, behavior: "smooth" });
   }
 
@@ -980,12 +941,6 @@ function IndexForUser({ userId }: { userId: string }) {
     if (!t) return;
     setTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
     setTagInput("");
-  }
-
-  function shiftFormDate(days: number) {
-    const p = formDate.split("-").map(Number);
-    const d = new Date(p[0] ?? 1970, (p[1] ?? 1) - 1, (p[2] ?? 1) + days);
-    setFormDate(iso(d.getFullYear(), d.getMonth(), d.getDate()));
   }
 
   const formDateParts = useMemo(() => {
@@ -1040,7 +995,6 @@ function IndexForUser({ userId }: { userId: string }) {
       }
     }
 
-    // edição de um lançamento existente: preserva tudo, aplica só o que mudou
     if (editTarget) {
       const cleanLabel = label.trim() || (SUGGESTIONS[kind][0] ?? "Outro");
       const isRec = freq !== "unico";
@@ -1150,7 +1104,6 @@ function IndexForUser({ userId }: { userId: string }) {
     }
 
     if (freq !== "unico") {
-
       const parcelas = freq === "diario" ? dailyCount : freq === "semanal" ? weeklyCount : infinite ? null : Math.floor(Number(installments));
       if (freq === "mensal" && !infinite && (!Number.isFinite(parcelas) || (parcelas ?? 0) < 1)) {
         setError("Informe a quantidade de parcelas ou marque 'sem fim'.");
@@ -1211,13 +1164,10 @@ function IndexForUser({ userId }: { userId: string }) {
     scrollTableToStart();
   }
 
-
-
   function deleteItems(items: DayItem[]) {
     if (items.length === 0) return;
     const entryIds = new Set(items.filter((i) => i.entryId).map((i) => i.entryId!));
     const skips = items.filter((i) => i.recurrenceId);
-    // caminho inverso: apagou a saída da previsão no calendário → limpa a previsão
     if (skips.some((s) => s.recurrenceId === FORECAST_ID)) {
       commit(
         entries.filter((e) => !entryIds.has(e.id)),
@@ -1244,7 +1194,6 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  /** edita o valor de um lançamento avulso */
   function updateEntryAmount(id: string, value: number) {
     commit(
       entries.map((e) => (e.id === id ? { ...e, amount: value } : e)),
@@ -1252,7 +1201,6 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  /** edita o valor de uma parcela/recorrência (vale para todas as ocorrências) */
   function updateRecurrenceAmount(recurrenceId: string, value: number) {
     commit(
       entries,
@@ -1260,7 +1208,6 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  /** ajuste de um dia da previsão diária: null apaga, número = gasto real, undefined restaura */
   function setForecastDay(date: string, value: number | null | undefined) {
     commit(
       entries,
@@ -1298,11 +1245,9 @@ function IndexForUser({ userId }: { userId: string }) {
       entries,
       recurrences.filter((r) => r.id !== recurrenceId),
     );
-    // caminho inverso: apagou a saída automática no calendário → limpa a previsão
     if (recurrenceId === FORECAST_ID) setForecastItems([]);
   }
 
-  /** leva da origem (Economias no calendário) até o dia exato no Horizonte */
   function jumpToHorizon(item: DayItem) {
     const [yy, mm] = item.date.split("-").map(Number);
     setAdding(false);
@@ -1316,8 +1261,6 @@ function IndexForUser({ userId }: { userId: string }) {
     setHorizonJump({ item, amount: fmtAmount(item.amount), ask: null, error: null });
   }
 
-  // Aguarda o mês de destino ser renderizado antes de centralizar o dia.
-  // Assim, saltos para anos distantes também chegam à célula correta.
   useEffect(() => {
     if (view !== "horizonte" || !horizonHighlight) return;
     const frame = requestAnimationFrame(() => {
@@ -1329,8 +1272,6 @@ function IndexForUser({ userId }: { userId: string }) {
     return () => cancelAnimationFrame(frame);
   }, [view, horizonHighlight, horizonStart]);
 
-
-  /** aplica salvar/desfazer da janela do Horizonte */
   function applyHorizonJump(action: "save" | "undo", scope: "day" | "all") {
     if (!horizonJump) return;
     const { item } = horizonJump;
@@ -1380,7 +1321,6 @@ function IndexForUser({ userId }: { userId: string }) {
     setConfirmAll(null);
   }
 
-  /** apaga tudo dentro de um intervalo de datas (mês ou ano) */
   function clearRange(startIso: string, endIso: string, months: { y: number; m: number }[]) {
     const skipByRec = new Map<string, string[]>();
     for (const r of recurrences) {
@@ -1433,21 +1373,6 @@ function IndexForUser({ userId }: { userId: string }) {
     };
   }
 
-  function clearMonthForDate(y: number, m: number) {
-    const last = new Date(y, m + 1, 0).getDate();
-    clearRange(iso(y, m, 1), iso(y, m, last), [{ y, m }]);
-  }
-
-  function clearYear() {
-    clearRange(
-      iso(cursor.y, 0, 1),
-      iso(cursor.y, 11, 31),
-      Array.from({ length: 12 }, (_, m) => ({ y: cursor.y, m })),
-    );
-  }
-
-
-
   const isToday = (day: number) =>
     cursor.y === today.getFullYear() && cursor.m === today.getMonth() && day === today.getDate();
 
@@ -1458,31 +1383,10 @@ function IndexForUser({ userId }: { userId: string }) {
         : "border-input bg-background text-muted-foreground hover:bg-accent"
     }`;
 
-  const actionBtn =
-    "h-8 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
-  const dangerBtn =
-    "h-8 rounded-lg border border-negative/40 bg-negative/10 px-2.5 text-xs font-semibold text-negative transition-colors hover:bg-negative/20";
-
-  const monthItems = rows.list.flatMap((r) => r.items);
-  const selectedList = Object.values(selected);
-
-
-  function selectMany(items: DayItem[]) {
-    setSelected((prev) => {
-      const next = { ...prev };
-      for (const it of items) next[it.key] = it;
-      return next;
-    });
-  }
-
-
   const navBtn =
     "grid size-9 shrink-0 place-items-center rounded-full border-[1.5px] border-foreground/30 text-lg font-bold leading-none text-foreground transition-colors hover:bg-accent disabled:text-foreground/50 disabled:opacity-100";
 
-  /** no Horizonte a página inteira vira o quadro: sem rolagem da página, tudo esticado */
   const isHorizon = view === "horizonte";
-
-  /** no calendário (saldos) aproveitamos a tela como no Horizonte: laterais e topo mais justos */
   const isSaldos = view === "saldos" && !adding;
 
   if (!loaded) return <LoadingScreen />;
@@ -1521,7 +1425,6 @@ function IndexForUser({ userId }: { userId: string }) {
             setView("diario");
           } else if (key === "perfil" || key === "totais" || key === "tags") {
             setView(key);
-
           } else {
             setView("saldos");
           }
@@ -1543,9 +1446,19 @@ function IndexForUser({ userId }: { userId: string }) {
                 </button>
               )}
               <h1 className={`truncate font-display font-semibold text-foreground ${isHorizon ? "text-lg" : "text-xl sm:text-2xl"}`}>
-                {view === "diario" || view === "menu"
-                  ? cap(today.toLocaleDateString("pt-BR", { month: "long" }))
-                  : cap(view)}
+                {view === "perfil"
+                  ? "Conta"
+                  : view === "saldos"
+                  ? "Calendário"
+                  : view === "horizonte"
+                  ? "Futuro"
+                  : view === "totais"
+                  ? "Resumo"
+                  : view === "tags"
+                  ? "Tags"
+                  : view === "diario" || view === "menu"
+                  ? "Hoje"
+                  : "Calendário"}
               </h1>
               <ThemeToggle />
             </div>
@@ -1747,7 +1660,6 @@ function IndexForUser({ userId }: { userId: string }) {
           />
         ) : (
           <>
-
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="raise-soft rounded-2xl border border-border bg-card p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">saldo anterior</p>
@@ -1769,9 +1681,6 @@ function IndexForUser({ userId }: { userId: string }) {
             </p>
           </div>
         </section>
-
-
-
 
         <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1 overflow-x-clip">
@@ -1813,18 +1722,12 @@ function IndexForUser({ userId }: { userId: string }) {
             {renderMonthPanel(nextRows, false)}
           </div>
         </div>
-
-
-
-
-
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
           toque em um dia para abrir o painel do dia · no + você lança em qualquer coluna e, em
           saídas, pode nomear a dívida, parcelar (12, 48, 360…) ou deixar recorrente sem fim
         </p>
-
           </>
         )}
 
@@ -2003,7 +1906,6 @@ function IndexForUser({ userId }: { userId: string }) {
           >
             {windowMode === "month" && (
               <div className="space-y-2 pt-2">
-
                 {rows.list
                   .map((r) => ({
                     row: r,
@@ -2313,7 +2215,6 @@ function IndexForUser({ userId }: { userId: string }) {
 
             {(windowMode === "add" || windowMode === "edit") && (
             <form onSubmit={saveEntry} onKeyDown={submitFormOnEnter} className="space-y-3">
-              {/* valor */}
               <div className="rounded-2xl bg-card p-4">
                 <span className="text-xs font-medium text-muted-foreground">
                   {freq !== "unico" ? "valor da parcela" : "valor"}
@@ -2328,7 +2229,6 @@ function IndexForUser({ userId }: { userId: string }) {
                 />
               </div>
 
-              {/* identificação */}
               <div className="rounded-2xl bg-card p-4">
                 <label className="block space-y-1.5">
                   <span className="text-xs font-medium text-muted-foreground">identificação</span>
@@ -2348,7 +2248,6 @@ function IndexForUser({ userId }: { userId: string }) {
                 </label>
               </div>
 
-              {/* data */}
               {windowMode === "add" && <div className="rounded-2xl bg-card p-4">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs font-medium text-muted-foreground">data</span>
@@ -2371,7 +2270,6 @@ function IndexForUser({ userId }: { userId: string }) {
                 )}
               </div>}
 
-              {/* repetição */}
               <div className="space-y-3 rounded-2xl bg-card p-4">
                 <span className="text-xs font-medium text-muted-foreground">repetição</span>
                 <div className="flex flex-wrap gap-1.5">
@@ -2492,10 +2390,8 @@ function IndexForUser({ userId }: { userId: string }) {
                     />
                   </div>
                 )}
-
               </div>
 
-              {/* tags: ao adicionar e ao editar */}
               {(windowMode === "add" || windowMode === "edit") && (
               <div className="space-y-2 rounded-2xl bg-card p-4">
                 <span className="text-xs font-medium text-muted-foreground">tags</span>
