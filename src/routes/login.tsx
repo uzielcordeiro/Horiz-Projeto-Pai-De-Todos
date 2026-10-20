@@ -52,6 +52,15 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // Caso 1: Checa primeiro se já existe uma sessão ativa no Supabase
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // Se houver sessão ativa, entra direto no app sem pedir senha
+        enterApp(session.access_token);
+        return;
+      }
+    });
+
     const params = new URLSearchParams(window.location.search);
     setSelectedPlan(parsePlan(params.get("plan")));
 
