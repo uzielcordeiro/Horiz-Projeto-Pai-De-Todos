@@ -153,65 +153,32 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
 
-  // Trava de eixos ao arrastar (impede rolagem em diagonal)
-  const dragRef = useRef<{
-    isDragging: boolean;
-    startX: number;
-    startY: number;
-    scrollLeft: number;
-    scrollTop: number;
-    axis: "x" | "y" | null;
-  }>({
-    isDragging: false,
-    startX: 0,
-    startY: 0,
-    scrollLeft: 0,
-    scrollTop: 0,
-    axis: null,
-  });
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  // Trava universal de eixos para macOS (trackpad/magic mouse) e Windows
+  useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    dragRef.current = {
-      isDragging: true,
-      startX: e.clientX,
-      startY: e.clientY,
-      scrollLeft: el.scrollLeft,
-      scrollTop: el.scrollTop,
-      axis: null,
-    };
-  };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    const el = scrollerRef.current;
-    if (!drag.isDragging || !el) return;
+    const handleWheel = (e: WheelEvent) => {
+      const absX = Math.abs(e.deltaX);
+      const absY = Math.abs(e.deltaY);
 
-    const dx = e.clientX - drag.startX;
-    const dy = e.clientY - drag.startY;
-
-    // Define o eixo dominante no primeiro movimento significativo (> 5px)
-    if (!drag.axis) {
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        drag.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
-      } else {
-        return;
+      // Se houver movimento combinado (diagonal gerada por trackpad ou mouse)
+      if (absX > 0 && absY > 0) {
+        e.preventDefault();
+        // Define estritamente o eixo principal e força o scroll apenas nele
+        if (absX >= absY) {
+          el.scrollLeft += e.deltaX;
+        } else {
+          el.scrollTop += e.deltaY;
+        }
       }
-    }
+    };
 
-    // Aplica o movimento estritamente no eixo travado
-    if (drag.axis === "x") {
-      el.scrollLeft = drag.scrollLeft - dx;
-    } else if (drag.axis === "y") {
-      el.scrollTop = drag.scrollTop - dy;
-    }
-  };
-
-  const handlePointerUpOrLeave = () => {
-    dragRef.current.isDragging = false;
-    dragRef.current.axis = null;
-  };
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
 
   // Desenha apenas as colunas na área visível (mais uma folga).
   useEffect(() => {
@@ -281,11 +248,8 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
       <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border">
         <div
           ref={scrollerRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUpOrLeave}
-          onPointerLeave={handlePointerUpOrLeave}
-          className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl select-none"
+          className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl"
+          style={{ touchAction: "pan-x pan-y" }}
         >
           <div className="flex min-w-max">
             {from > 0 && <div aria-hidden className="shrink-0" style={{ width: from * COLUMN_WIDTH }} />}
