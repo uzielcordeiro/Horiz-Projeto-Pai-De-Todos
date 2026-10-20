@@ -153,33 +153,6 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
 
-  // Trava universal de eixos para macOS (trackpad/magic mouse) e Windows
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      const absX = Math.abs(e.deltaX);
-      const absY = Math.abs(e.deltaY);
-
-      // Se houver movimento combinado (diagonal gerada por trackpad ou mouse)
-      if (absX > 0 && absY > 0) {
-        e.preventDefault();
-        // Define estritamente o eixo principal e força o scroll apenas nele
-        if (absX >= absY) {
-          el.scrollLeft += e.deltaX;
-        } else {
-          el.scrollTop += e.deltaY;
-        }
-      }
-    };
-
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => {
-      el.removeEventListener("wheel", handleWheel);
-    };
-  }, []);
-
   // Desenha apenas as colunas na área visível (mais uma folga).
   useEffect(() => {
     const el = scrollerRef.current;
@@ -249,7 +222,10 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
         <div
           ref={scrollerRef}
           className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl"
-          style={{ touchAction: "pan-x pan-y" }}
+          style={{
+            touchAction: "pan-x pan-y",
+            WebkitOverflowScrolling: "touch",
+          }}
         >
           <div className="flex min-w-max">
             {from > 0 && <div aria-hidden className="shrink-0" style={{ width: from * COLUMN_WIDTH }} />}
