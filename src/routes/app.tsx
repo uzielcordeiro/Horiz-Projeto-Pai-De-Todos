@@ -87,7 +87,7 @@ type Entry = {
   label: string;
   kind: Kind;
   tags?: string[];
-  /** Economias criadas pelo Horizonte funcionam como transferência do saldo. */
+  /** Economias criadas pelo Futuro funcionam como transferência do saldo. */
   horizonTransfer?: boolean;
 };
 
@@ -148,7 +148,7 @@ const longDate = (isoDate: string) =>
 
 type Status = "positive" | "warning" | "negative";
 const statusOf = (b: number): Status => (b >= 1000 ? "positive" : b >= 0 ? "warning" : "negative");
-/** no Horizonte, R$ 1.000 negativo ou mais ganha o vermelho mais intenso (--negative-deep) */
+/** no Futuro, R$ 1.000 negativo ou mais ganha o vermelho mais intenso (--negative-deep) */
 const horizonStatusOf = (b: number): HorizonDay["status"] =>
   b <= -1000 ? "negativeDeep" : b >= 2000 ? "surplus" : statusOf(b);
 
@@ -1464,7 +1464,7 @@ function IndexForUser({ userId }: { userId: string }) {
             </div>
             {isHorizon && (
               <div
-                aria-label="Legenda dos marcadores do Horizonte"
+                aria-label="Legenda dos marcadores do Futuro"
                 className="horizon-header-legend pointer-events-none absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center gap-6 text-xs text-muted-foreground sm:gap-8"
               >
                 <span className="flex items-center gap-2 whitespace-nowrap">
@@ -2012,8 +2012,8 @@ function IndexForUser({ userId }: { userId: string }) {
                     <span className="font-bold tracking-wide text-primary">as outras colunas</span>
                   ) : windowKind === "economias" ? (
                     <>
-                      o{" "}
-                      <span className="font-bold tracking-wide text-primary">Horizonte</span>
+                      a aba lateral do{" "}
+                      <span className="font-bold tracking-wide text-primary">Futuro</span>
                     </>
                   ) : (
                     <>
@@ -2146,10 +2146,10 @@ function IndexForUser({ userId }: { userId: string }) {
                   <button
                     type="button"
                     onClick={() => jumpToHorizon(activeItem)}
-                    aria-label="Ir para este dia no Horizonte"
+                    aria-label="Ir para a seção do Futuro"
                     className="mt-3 inline-flex h-8 items-center gap-1 rounded-lg border border-primary/40 bg-primary/15 px-3 text-sm font-semibold text-primary"
                   >
-                    ir ao Horizonte
+                    ir para a seção do Futuro
                     <span aria-hidden>›</span>
                   </button>
                 )}
@@ -2173,21 +2173,21 @@ function IndexForUser({ userId }: { userId: string }) {
                     <button
                       type="button"
                       onClick={() => jumpToHorizon(activeItem)}
-                      aria-label="Ir para este dia no Horizonte"
+                      aria-label="Ir para a seção do Futuro"
                       className="block w-full rounded-2xl border border-primary/30 bg-card p-4 text-left transition-colors"
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="text-xs font-medium text-muted-foreground">origem</span>
                         <span className="inline-flex h-8 items-center gap-1 rounded-lg border border-primary/40 bg-primary/15 px-3 text-sm font-semibold text-primary">
-                          ir ao Horizonte
+                          ir para a seção do Futuro
                           <span aria-hidden>›</span>
                         </span>
                       </span>
                       <span className="mt-1 block text-sm font-semibold text-foreground">
-                        {`Poupado do Horizonte em ${longDate(activeItem.date)}`}
+                        {`Poupado do Futuro em ${longDate(activeItem.date)}`}
                       </span>
                       <span className="mt-2 block text-xs leading-relaxed text-muted-foreground">
-                        Para adicionar ou poupar valores, use o Horizonte.
+                        Para adicionar ou retirar novos valores, use a aba lateral do Futuro.
                       </span>
                     </button>
                   ) : (
@@ -2197,7 +2197,7 @@ function IndexForUser({ userId }: { userId: string }) {
                       {`Lançado em ${longDate(activeItem.date)}`}
                     </p>
                     <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                      Para adicionar ou poupar valores, use o Horizonte.
+                      Para adicionar ou retirar novos valores, use a aba lateral do Futuro.
                     </p>
                   </div>
                   )
