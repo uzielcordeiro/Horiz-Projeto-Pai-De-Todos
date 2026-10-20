@@ -109,7 +109,7 @@ export function TotalsBoard({
         <p className="mb-3 text-sm text-muted-foreground">cálculos do mês</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Card
-            title="performance"
+            title="resultado do mês"
             formula={
               <>
                 <Dot k="entradas" />－<Dot k="saidas" />－<Dot k="diarios" />－
@@ -139,7 +139,7 @@ export function TotalsBoard({
             hint={`poupando ${Math.round(economizado).toLocaleString("pt-BR")}% do seu salário`}
           />
           <Card
-            title="custo de vida"
+            title="gastos do mês"
             formula={
               <>
                 <Dot k="saidas" />＋<Dot k="diarios" />＋<Dot k="cartao" />
@@ -149,7 +149,7 @@ export function TotalsBoard({
             hint={custoVida === 0 ? "zerado" : "somatório dos gastos do mês"}
           />
           <Card
-            title="diário médio"
+            title="gasto diário"
             formula={
               <>
                 <Dot k="diarios" />
