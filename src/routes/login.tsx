@@ -52,20 +52,35 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    // Caso 1: Checa primeiro se já existe uma sessão ativa no Supabase
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        // Se houver sessão ativa, entra direto no app sem pedir senha
-        enterApp(session.access_token);
-        return;
-      }
-    });
-
     const params = new URLSearchParams(window.location.search);
     setSelectedPlan(parsePlan(params.get("plan")));
 
-    // Define a aba inicial com base no parâmetro 'tab' da URL
     const urlTab = params.get("tab");
+    const rawEmail = params.get("email");
+    const sessionId = params.get("session_id");
+
+    const isCheckoutFlow =
+      urlTab === "register" ||
+      urlTab === "up" ||
+      urlTab === "cadastrar" ||
+      !!sessionId ||
+      !!rawEmail;
+
+    if (isCheckoutFlow) {
+      // Se for um fluxo de pós-checkout ou cadastro direcionado, força o encerramento
+      // de qualquer sessão residual para garantir o isolamento total da nova conta.
+      supabase.auth.signOut().catch(() => {});
+    } else {
+      // Se NÃO for fluxo de checkout, mantém o comportamento padrão de auto-login para conveniência do usuário.
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          enterApp(session.access_token);
+          return;
+        }
+      });
+    }
+
+    // Define a aba inicial com base no parâmetro 'tab' da URL
     if (urlTab === "register" || urlTab === "up" || urlTab === "cadastrar") {
       setMode("up");
     } else if (urlTab === "login" || urlTab === "in" || urlTab === "entrar") {
@@ -73,9 +88,6 @@ export function LoginPage() {
     }
 
     // Leitura e sanitização segura do e-mail da URL, session_id ou recuperação do localStorage
-    const rawEmail = params.get("email");
-    const sessionId = params.get("session_id");
-
     if (rawEmail) {
       try {
         setEmail(decodeURIComponent(rawEmail).trim());
