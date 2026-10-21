@@ -40,8 +40,6 @@ import {
   dayBefore,
 } from "@/lib/recurrence";
 
-import { userKey, adoptLegacyKeys } from "@/lib/user-storage";
-
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
@@ -91,12 +89,6 @@ type Entry = {
   horizonTransfer?: boolean;
 };
 
-const STORAGE_KEY = "timeline-entries-v1";
-const REC_KEY = "timeline-recurrences-v1";
-const FORECAST_KEY = "timeline-forecast-v1";
-const FORECAST_DIVISOR_KEY = "timeline-forecast-divisor-v1";
-const TAGS_KEY = "timeline-tags-v1";
-const BACKUP_SUFFIX = "-backup";
 const FORECAST_ID = "forecast-auto";
 
 const KINDS: { key: Kind; title: string; sign: 1 | -1 | 0 }[] = [
@@ -116,29 +108,11 @@ const SUGGESTIONS: Record<Kind, string[]> = {
   cartao: ["Fatura", "Parcela", "Compra", "Outro"],
 };
 
-const TAG_SUGGESTIONS = [
-  "fixo",
-  "variável",
-  "extra",
-  "serviço extra",
-  "casa",
-  "carro",
-  "saúde",
-  "lazer",
-  "investimento",
-];
-
-const brl = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
 const iso = (y: number, m: number, d: number) =>
   `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 const monthLabel = (y: number, m: number) =>
   new Date(y, m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-
-/** só a primeira letra em maiúscula, mantendo o resto do texto igual */
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Data por extenso, com "1º" no primeiro dia do mês. */
 const longDate = (isoDate: string) =>
@@ -306,7 +280,6 @@ function Index() {
 }
 
 function IndexForUser({ userId }: { userId: string }) {
-  const K = (base: string) => userKey(userId, base);
   const today = new Date();
   const tableRef = useRef<HTMLElement>(null);
   const tableHeaderRef = useRef<HTMLDivElement>(null);
@@ -331,9 +304,6 @@ function IndexForUser({ userId }: { userId: string }) {
   const [forecastItems, setForecastItems] = useState<ForecastItem[]>([]);
   const [forecastDivisor, setForecastDivisor] = useState(30);
 
-  const [customTags, setCustomTags] = useState<string[]>([]);
-  const [deletedTags, setDeletedTags] = useState<string[]>([]);
-
   const [kind, setKind] = useState<Kind>("entradas");
   const [windowKind, setWindowKind] = useState<Kind | "saldos">("entradas");
   const [amount, setAmount] = useState("");
@@ -356,7 +326,6 @@ function IndexForUser({ userId }: { userId: string }) {
   const [daysOfMonth, setDaysOfMonth] = useState<number[]>([]);
 
   const [history, setHistory] = useState<{ entries: Entry[]; recurrences: Recurrence[] }[]>([]);
-  const [selectMode, setSelectMode] = useState(false);
   const [editTarget, setEditTarget] = useState<{ type: "entry" | "rec"; id: string } | null>(null);
   const [formOrigin, setFormOrigin] = useState<"standard" | "horizon">("standard");
   const [horizonJump, setHorizonJump] = useState<{
@@ -366,98 +335,39 @@ function IndexForUser({ userId }: { userId: string }) {
     error: string | null;
   } | null>(null);
   const [horizonHighlight, setHorizonHighlight] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Record<string, DayItem>>({});
-  const [confirmAll, setConfirmAll] = useState<"mes" | "ano" | "tudo" | null>(null);
 
-  function commit(nextEntries: Entry[], nextRecurrences: Recurrence[]) {
-    setHistory((h) => [...h.slice(-19), { entries, recurrences }]);
-    setEntries(nextEntries);
-    setRecurrences(nextRecurrences);
-  }
-
-  function undo() {
-    setHistory((h) => {
-      const last = h[h.length - 1];
-      if (!last) return h;
-      setEntries(last.entries);
-      setRecurrences(last.recurrences);
-      setSelected({});
-      return h.slice(0, -1);
-    });
-  }
-
+  // Carregar dados diretamente do Supabase na inicialização
   useLayoutEffect(() => {
-    adoptLegacyKeys(userId, [STORAGE_KEY, REC_KEY, FORECAST_KEY, FORECAST_DIVISOR_KEY, TAGS_KEY].flatMap((b) => [b, b + BACKUP_SUFFIX]));
-    function readKey<T>(key: string, parse: (raw: string) => T): T | undefined {
-      for (const k of [key, key + BACKUP_SUFFIX]) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw == null) continue;
-          return parse(raw);
-        } catch {
-          try {
-            const raw = localStorage.getItem(k);
-            if (raw != null) localStorage.setItem(k + "-corrompido-" + Date.now(), raw);
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-      return undefined;
-    }
-    const e = readKey(K(STORAGE_KEY), (raw) => {
-      const p = JSON.parse(raw) as Entry[];
-      if (!Array.isArray(p)) throw new Error("bad");
-      return p.map((x) => ({ ...x, kind: x.kind ?? "entradas" }));
-    });
-    if (e) setEntries(e);
-    const r = readKey(K(REC_KEY), (raw) => {
-      const p = JSON.parse(raw) as Recurrence[];
-      if (!Array.isArray(p)) throw new Error("bad");
-      return p.map((x) => ({ ...x, skipped: x.skipped ?? [] }));
-    });
-    if (r) setRecurrences(r);
-    const f = readKey(K(FORECAST_KEY), (raw) => {
-      const p = JSON.parse(raw) as ForecastItem[];
-      if (!Array.isArray(p)) throw new Error("bad");
-      return p;
-    });
-    if (f) setForecastItems(f);
-    const d = readKey(K(FORECAST_DIVISOR_KEY), (raw) => {
-      const n = Number(raw);
-      if (!Number.isFinite(n) || n <= 0) throw new Error("bad");
-      return n;
-    });
-    if (d) setForecastDivisor(d);
-    const t = readKey(K(TAGS_KEY), (raw) => JSON.parse(raw) as { custom?: string[]; deleted?: string[] });
-    if (t) {
-      setCustomTags(t.custom ?? []);
-      setDeletedTags(t.deleted ?? []);
-    }
-    try {
-      void navigator.storage?.persist?.();
-    } catch {
-      /* ignore */
-    }
-    setLoaded(true);
-  }, []);
+    let cancelled = false;
+    async function loadFromSupabase() {
+      if (!userId) return;
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", userId)
+        .order("date", { ascending: false });
 
-  useEffect(() => {
-    if (!loaded) return;
-    const write = (key: string, value: string) => {
-      try {
-        localStorage.setItem(key, value);
-        localStorage.setItem(key + BACKUP_SUFFIX, value);
-      } catch {
-        /* ignore */
+      if (cancelled) return;
+      if (error) {
+        console.error("Erro ao carregar transações do Supabase:", error);
+      } else if (data) {
+        const mappedEntries: Entry[] = data.map((item) => ({
+          id: item.id,
+          amount: item.amount,
+          date: item.date,
+          label: item.description || "Lançamento",
+          kind: (item.type as Kind) || "entradas",
+          tags: item.marketing_tags ?? [],
+        }));
+        setEntries(mappedEntries);
       }
+      setLoaded(true);
+    }
+    void loadFromSupabase();
+    return () => {
+      cancelled = true;
     };
-    write(K(STORAGE_KEY), JSON.stringify(entries));
-    write(K(REC_KEY), JSON.stringify(recurrences));
-    write(K(FORECAST_KEY), JSON.stringify(forecastItems));
-    write(K(FORECAST_DIVISOR_KEY), String(forecastDivisor));
-    write(K(TAGS_KEY), JSON.stringify({ custom: customTags, deleted: deletedTags }));
-  }, [entries, recurrences, forecastItems, forecastDivisor, customTags, deletedTags, loaded]);
+  }, [userId]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -503,6 +413,31 @@ function IndexForUser({ userId }: { userId: string }) {
       return existing ? prev.filter((r) => r.id !== FORECAST_ID) : prev;
     });
   }, [forecastItems, loaded]);
+
+  function commit(nextEntries: Entry[], nextRecurrences: Recurrence[]) {
+    setHistory((h) => [...h.slice(-19), { entries, recurrences }]);
+    setEntries(nextEntries);
+    setRecurrences(nextRecurrences);
+
+    // Se houver nova entrada adicionada, persiste diretamente no Supabase
+    if (userId && nextEntries.length > entries.length) {
+      const latestEntry = nextEntries[nextEntries.length - 1];
+      if (latestEntry) {
+        void supabase.from("transactions").insert([
+          {
+            user_id: userId,
+            amount: latestEntry.amount,
+            type: latestEntry.kind,
+            date: latestEntry.date,
+            description: latestEntry.label,
+            marketing_tags: latestEntry.tags ?? [],
+          },
+        ]).then(({ error }) => {
+          if (error) console.error("Erro ao salvar transação no Supabase:", error);
+        });
+      }
+    }
+  }
 
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
 
@@ -664,17 +599,6 @@ function IndexForUser({ userId }: { userId: string }) {
       });
     });
   }
-
-  function shiftDay(delta: number) {
-    if (selectedDay == null) return;
-    resetForm();
-    setAdding(false);
-    const d = new Date(cursor.y, cursor.m, selectedDay + delta);
-    setCursor({ y: d.getFullYear(), m: d.getMonth() });
-    setSelectedDay(d.getDate());
-  }
-
-  const selectedRow = selectedDay == null ? null : rows.list[selectedDay - 1] ?? null;
 
   function renderDayRow(row: MonthRows["list"][number], interactive: boolean) {
     const s = statusOf(row.balance);
@@ -1174,7 +1098,6 @@ function IndexForUser({ userId }: { userId: string }) {
         recurrences.filter((r) => r.id !== FORECAST_ID),
       );
       setForecastItems([]);
-      setSelected({});
       return;
     }
     commit(
@@ -1184,7 +1107,6 @@ function IndexForUser({ userId }: { userId: string }) {
         return dates.length ? { ...r, skipped: [...r.skipped, ...dates] } : r;
       }),
     );
-    setSelected({});
   }
 
   function removeEntry(id: string) {
@@ -1317,8 +1239,6 @@ function IndexForUser({ userId }: { userId: string }) {
   function deleteAll() {
     commit([], []);
     setForecastItems([]);
-    setSelected({});
-    setConfirmAll(null);
   }
 
   function clearRange(startIso: string, endIso: string, months: { y: number; m: number }[]) {
@@ -1339,8 +1259,6 @@ function IndexForUser({ userId }: { userId: string }) {
         return dates ? { ...r, skipped: [...r.skipped, ...dates] } : r;
       }),
     );
-    setSelected({});
-    setConfirmAll(null);
   }
 
   function clearMonth() {
@@ -1351,25 +1269,18 @@ function IndexForUser({ userId }: { userId: string }) {
   }
 
   function resetCalendar(scope: "month" | "all") {
-    const snapshot = { entries, recurrences, forecastItems, forecastDivisor, customTags, deletedTags, history };
+    const snapshot = { entries, recurrences, forecastItems, history };
     if (scope === "month") {
       clearMonth();
     } else {
       deleteAll();
-      setForecastDivisor(30);
-      setCustomTags([]);
-      setDeletedTags([]);
       setHistory([]);
     }
     return () => {
       setEntries(snapshot.entries);
       setRecurrences(snapshot.recurrences);
       setForecastItems(snapshot.forecastItems);
-      setForecastDivisor(snapshot.forecastDivisor);
-      setCustomTags(snapshot.customTags);
-      setDeletedTags(snapshot.deletedTags);
       setHistory(snapshot.history);
-      setSelected({});
     };
   }
 
@@ -1740,9 +1651,6 @@ function IndexForUser({ userId }: { userId: string }) {
             (it) => it.recurrenceId !== FORECAST_ID && it.kind === windowKind,
           );
           const monthPrefix = iso(formDateParts.y, formDateParts.m, 1).slice(0, 7);
-          const monthHasItems =
-            entries.some((e) => e.date.startsWith(monthPrefix)) ||
-            recurrences.some((r) => occurrencesInMonth(r, formDateParts.y, formDateParts.m).length > 0);
           const activeItem = windowDayItems.find((item) => item.key === activeItemKey) ?? null;
           const horizonDayItems = windowDayRow?.items ?? [];
           const horizonPicking = windowMode === "pick" || (windowMode === "horizon" && horizonDayItems.length === 0);
