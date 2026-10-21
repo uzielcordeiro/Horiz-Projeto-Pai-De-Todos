@@ -5,12 +5,11 @@ import { supabaseConfigured, REMEMBER_KEY } from "@/integrations/supabase/extras
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { parsePlan, type Plan } from "@/lib/plans";
-import { createCheckout, getCheckoutSessionEmail } from "@/lib/billing.functions";
+import { createCheckout, getCheckoutSessionEmail, activatePendingSubscription } from "@/lib/billing.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 const REMEMBERED_EMAIL_KEY = "remembered_email";
 const LEGACY_EMAIL_KEY = "horiz-last-email";
-// TODO: trocar pelo contato real de suporte
 const SUPPORT_EMAIL = "suporte@horiz.app";
 
 export const Route = createFileRoute("/login")({
@@ -39,6 +38,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const checkout = useServerFn(createCheckout);
   const fetchSessionEmail = useServerFn(getCheckoutSessionEmail);
+  const activateSub = useServerFn(activatePendingSubscription);
 
   const [selectedPlan, setSelectedPlan] = useState<Plan | undefined>();
   const [mode, setMode] = useState<"in" | "up" | "forgot">("in");
@@ -67,27 +67,22 @@ export function LoginPage() {
       !!rawEmail;
 
     if (isCheckoutFlow) {
-      // Se for um fluxo de pós-checkout ou cadastro direcionado, força o encerramento
-      // de qualquer sessão residual para garantir o isolamento total da nova conta.
       supabase.auth.signOut().catch(() => {});
     } else {
-      // Se NÃO for fluxo de checkout, mantém o comportamento padrão de auto-login para conveniência do usuário.
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
-          enterApp(session.access_token);
+          enterApp(session.access_token, sessionId);
           return;
         }
       });
     }
 
-    // Define a aba inicial com base no parâmetro 'tab' da URL
     if (urlTab === "register" || urlTab === "up" || urlTab === "cadastrar") {
       setMode("up");
     } else if (urlTab === "login" || urlTab === "in" || urlTab === "entrar") {
       setMode("in");
     }
 
-    // Leitura e sanitização segura do e-mail da URL, session_id ou recuperação do localStorage
     if (rawEmail) {
       try {
         setEmail(decodeURIComponent(rawEmail).trim());
@@ -102,9 +97,7 @@ export function LoginPage() {
             setEmail(res.email.trim());
           }
         })
-        .catch(() => {
-          // Fallback silencioso em caso de erro na consulta ao Stripe
-        })
+        .catch(() => {})
         .finally(() => {
           setBusy(false);
         });
@@ -124,17 +117,28 @@ export function LoginPage() {
 
   function switchMode(m: typeof mode) { setMode(m); setMsg(null); }
 
-  async function enterApp(token?: string) {
-    if (!selectedPlan || !token) {
-      await navigate({ to: "/app", replace: true });
-      return;
-    }
+  async function enterApp(token?: string, sessionIdToActivate?: string) {
     setBusy(true);
     try {
+      // Se houver um session_id pendente na URL, ativa a assinatura imediatamente antes de entrar no app
+      const activeSessionId = sessionIdToActivate || new URLSearchParams(window.location.search).get("session_id");
+      if (activeSessionId) {
+        try {
+          await activateSub({ data: { sessionId: activeSessionId } });
+        } catch {
+          // Continua mesmo se houver falha na ativação síncrona
+        }
+      }
+
+      if (!selectedPlan || !token) {
+        await navigate({ to: "/app", replace: true });
+        return;
+      }
+
       const { url } = await checkout({ data: { token, plan: selectedPlan, origin: window.location.origin } });
       window.location.assign(url);
     } catch {
-      setMsg({ ok: false, text: "Você entrou, mas não foi possível abrir o pagamento. Tente novamente em instantes." });
+      setMsg({ ok: false, text: "Erro ao processar redirecionamento. Tente novamente." });
       setBusy(false);
     }
   }
@@ -143,12 +147,17 @@ export function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setMsg(null);
+
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id") || undefined;
+
     if (mode === "forgot") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
       setBusy(false);
       if (error) return setMsg({ ok: false, text: error.message });
-      return setMsg({ ok: true, text: "Se o e-mail estiver cadastrado, você receberá um link para criar uma nova senha." });
+      return setMsg({ ok: true, text: "Se o e-mail estiver cadastrado, você receberá um link para redefinição." });
     }
+
     if (mode === "in") {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
@@ -157,21 +166,28 @@ export function LoginPage() {
         localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
         localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
       } catch { /* ignore */ }
-      await enterApp(data?.session?.access_token);
+      await enterApp(data?.session?.access_token, sessionId);
     } else {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { 
-          data: { full_name: fullName.trim(), whatsapp: whatsapp.trim() }, 
-          emailRedirectTo: `${window.location.origin}/login?tab=login&email=${encodeURIComponent(email)}` 
+          data: { 
+            full_name: fullName.trim(), 
+            whatsapp: whatsapp.trim() 
+          }, 
+          emailRedirectTo: `${window.location.origin}/login?tab=login&email=${encodeURIComponent(email)}${sessionId ? `&session_id=${sessionId}` : ""}` 
         },
       });
       setBusy(false);
       if (error) return setMsg({ ok: false, text: error.message });
       try { localStorage.setItem(REMEMBERED_EMAIL_KEY, email); } catch { /* ignore */ }
-      if (data.session) await enterApp(data.session.access_token);
-      else setMsg({ ok: true, text: "Cadastro realizado com sucesso! Verifique o link enviado para o seu e-mail." });
+
+      if (data.session) {
+        await enterApp(data.session.access_token, sessionId);
+      } else {
+        setMsg({ ok: true, text: "Cadastro realizado com sucesso! Verifique o link enviado para o seu e-mail." });
+      }
     }
   }
 
