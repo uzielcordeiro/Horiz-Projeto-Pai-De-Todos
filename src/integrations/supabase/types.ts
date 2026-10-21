@@ -62,6 +62,62 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          amount: number
+          type: string
+          description: string | null
+          category: string | null
+          payload: Json | null
+          campaign_source: string | null
+          customer_phone: string | null
+          marketing_tags: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date: string
+          amount: number
+          type: string
+          description?: string | null
+          category?: string | null
+          payload?: Json | null
+          campaign_source?: string | null
+          customer_phone?: string | null
+          marketing_tags?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          date?: string
+          amount?: number
+          type?: string
+          description?: string | null
+          category?: string | null
+          payload?: Json | null
+          campaign_source?: string | null
+          customer_phone?: string | null
+          marketing_tags?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
