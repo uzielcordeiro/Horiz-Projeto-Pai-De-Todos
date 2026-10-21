@@ -414,8 +414,28 @@ function IndexForUser({ userId }: { userId: string }) {
     });
   }, [forecastItems, loaded]);
 
-  function commit(nextEntries: Entry[], nextRecurrences: Recurrence[]) {
+  async function commit(nextEntries: Entry[], nextRecurrences: Recurrence[]) {
     setHistory((h) => [...h.slice(-19), { entries, recurrences }]);
+
+    // Identificar itens removidos para sincronizar o DELETE com o Supabase
+    if (userId) {
+      const currentIds = new Set(nextEntries.map((e) => e.id));
+      const removedEntries = entries.filter((e) => !currentIds.has(e.id));
+
+      if (removedEntries.length > 0) {
+        const removedIds = removedEntries.map((e) => e.id);
+        const { error: deleteErr } = await supabase
+          .from("transactions")
+          .delete()
+          .eq("user_id", userId)
+          .in("id", removedIds);
+
+        if (deleteErr) {
+          console.error("Erro ao deletar transação no Supabase:", deleteErr);
+        }
+      }
+    }
+
     setEntries(nextEntries);
     setRecurrences(nextRecurrences);
 
@@ -423,8 +443,9 @@ function IndexForUser({ userId }: { userId: string }) {
     if (userId && nextEntries.length > entries.length) {
       const latestEntry = nextEntries[nextEntries.length - 1];
       if (latestEntry) {
-        void supabase.from("transactions").insert([
+        const { error: insertErr } = await supabase.from("transactions").insert([
           {
+            id: latestEntry.id,
             user_id: userId,
             amount: latestEntry.amount,
             type: latestEntry.kind,
@@ -432,9 +453,10 @@ function IndexForUser({ userId }: { userId: string }) {
             description: latestEntry.label,
             marketing_tags: latestEntry.tags ?? [],
           },
-        ]).then(({ error }) => {
-          if (error) console.error("Erro ao salvar transação no Supabase:", error);
-        });
+        ]);
+        if (insertErr) {
+          console.error("Erro ao salvar transação no Supabase:", insertErr);
+        }
       }
     }
   }
@@ -875,7 +897,7 @@ function IndexForUser({ userId }: { userId: string }) {
   const formWeekLimit = weeklyRepetitionLimit(formDate);
   const finiteRepetition = freq === "diario" || freq === "semanal";
 
-  function saveEntry(e: React.FormEvent) {
+  async function saveEntry(e: React.FormEvent) {
     e.preventDefault();
     const value = parseAmount(amount);
     if (!Number.isFinite(value) || value <= 0) {
@@ -942,7 +964,7 @@ function IndexForUser({ userId }: { userId: string }) {
         const original = entries.find((entry) => entry.id === editTarget.id);
         if (!original) return;
         if (isRec) {
-          commit(entries.filter((en) => en.id !== editTarget.id), [
+          await commit(entries.filter((en) => en.id !== editTarget.id), [
             ...recurrences,
             {
               id: crypto.randomUUID(),
@@ -963,7 +985,7 @@ function IndexForUser({ userId }: { userId: string }) {
             },
           ]);
         } else {
-          commit(
+          await commit(
             entries.map((en) =>
               en.id === editTarget.id
                 ? {
@@ -980,7 +1002,7 @@ function IndexForUser({ userId }: { userId: string }) {
       } else if (isRec) {
         const original = recurrences.find((recurrence) => recurrence.id === editTarget.id);
         if (!original) return;
-        commit(
+        await commit(
           entries,
           recurrences.map((r) =>
             r.id === editTarget.id
@@ -1002,7 +1024,7 @@ function IndexForUser({ userId }: { userId: string }) {
       } else {
         const original = recurrences.find((recurrence) => recurrence.id === editTarget.id);
         if (!original) return;
-        commit(
+        await commit(
           [
             ...entries,
             {
@@ -1036,7 +1058,7 @@ function IndexForUser({ userId }: { userId: string }) {
       const dom = freq === "mensal" ? [d] : freq === "diario" ? dailyDays : [];
       const dow = freq === "semanal" ? [new Date(y, m, d).getDay()] : [];
       setError(null);
-      commit(entries, [
+      await commit(entries, [
         ...recurrences,
         {
           id: crypto.randomUUID(),
@@ -1065,7 +1087,7 @@ function IndexForUser({ userId }: { userId: string }) {
     }
 
     setError(null);
-    commit(
+    await commit(
       [
         ...entries,
         {
@@ -1088,19 +1110,19 @@ function IndexForUser({ userId }: { userId: string }) {
     scrollTableToStart();
   }
 
-  function deleteItems(items: DayItem[]) {
+  async function deleteItems(items: DayItem[]) {
     if (items.length === 0) return;
     const entryIds = new Set(items.filter((i) => i.entryId).map((i) => i.entryId!));
     const skips = items.filter((i) => i.recurrenceId);
     if (skips.some((s) => s.recurrenceId === FORECAST_ID)) {
-      commit(
+      await commit(
         entries.filter((e) => !entryIds.has(e.id)),
         recurrences.filter((r) => r.id !== FORECAST_ID),
       );
       setForecastItems([]);
       return;
     }
-    commit(
+    await commit(
       entries.filter((e) => !entryIds.has(e.id)),
       recurrences.map((r) => {
         const dates = skips.filter((s) => s.recurrenceId === r.id).map((s) => s.date);
@@ -1109,29 +1131,29 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  function removeEntry(id: string) {
-    commit(
+  async function removeEntry(id: string) {
+    await commit(
       entries.filter((e) => e.id !== id),
       recurrences,
     );
   }
 
-  function updateEntryAmount(id: string, value: number) {
-    commit(
+  async function updateEntryAmount(id: string, value: number) {
+    await commit(
       entries.map((e) => (e.id === id ? { ...e, amount: value } : e)),
       recurrences,
     );
   }
 
-  function updateRecurrenceAmount(recurrenceId: string, value: number) {
-    commit(
+  async function updateRecurrenceAmount(recurrenceId: string, value: number) {
+    await commit(
       entries,
       recurrences.map((r) => (r.id === recurrenceId ? { ...r, amount: value } : r)),
     );
   }
 
-  function setForecastDay(date: string, value: number | null | undefined) {
-    commit(
+  async function setForecastDay(date: string, value: number | null | undefined) {
+    await commit(
       entries,
       recurrences.map((r) => {
         if (r.id !== FORECAST_ID) return r;
@@ -1143,8 +1165,8 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  function skipOccurrence(recurrenceId: string, date: string) {
-    commit(
+  async function skipOccurrence(recurrenceId: string, date: string) {
+    await commit(
       entries,
       recurrences.map((r) =>
         r.id === recurrenceId ? { ...r, skipped: [...r.skipped, date] } : r,
@@ -1152,9 +1174,9 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  function endRecurrenceFrom(recurrenceId: string, date: string) {
+  async function endRecurrenceFrom(recurrenceId: string, date: string) {
     const end = dayBefore(date);
-    commit(
+    await commit(
       entries,
       recurrences.flatMap((r) =>
         r.id !== recurrenceId ? [r] : end < r.startDate ? [] : [{ ...r, endDate: end }],
@@ -1162,8 +1184,8 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  function removeRecurrence(recurrenceId: string) {
-    commit(
+  async function removeRecurrence(recurrenceId: string) {
+    await commit(
       entries,
       recurrences.filter((r) => r.id !== recurrenceId),
     );
@@ -1194,7 +1216,7 @@ function IndexForUser({ userId }: { userId: string }) {
     return () => cancelAnimationFrame(frame);
   }, [view, horizonHighlight, horizonStart]);
 
-  function applyHorizonJump(action: "save" | "undo", scope: "day" | "all") {
+  async function applyHorizonJump(action: "save" | "undo", scope: "day" | "all") {
     if (!horizonJump) return;
     const { item } = horizonJump;
     const value = action === "undo" ? 0 : parseAmount(horizonJump.amount);
@@ -1204,14 +1226,14 @@ function IndexForUser({ userId }: { userId: string }) {
     }
     const remove = value === 0;
     if (item.entryId) {
-      if (remove) removeEntry(item.entryId);
-      else updateEntryAmount(item.entryId, value);
+      if (remove) await removeEntry(item.entryId);
+      else await updateEntryAmount(item.entryId, value);
     } else if (item.recurrenceId) {
       const r = recurrences.find((x) => x.id === item.recurrenceId);
       if (!r) return;
       if (scope === "all") {
-        if (remove) removeRecurrence(r.id);
-        else updateRecurrenceAmount(r.id, value);
+        if (remove) await removeRecurrence(r.id);
+        else await updateRecurrenceAmount(r.id, value);
       } else {
         const nextRecs = recurrences.map((x) =>
           x.id === r.id ? { ...x, skipped: [...x.skipped, item.date] } : x,
@@ -1230,18 +1252,18 @@ function IndexForUser({ userId }: { userId: string }) {
                 horizonTransfer: true,
               },
             ];
-        commit(nextEntries, nextRecs);
+        await commit(nextEntries, nextRecs);
       }
     }
     setHorizonJump(null);
   }
 
-  function deleteAll() {
-    commit([], []);
+  async function deleteAll() {
+    await commit([], []);
     setForecastItems([]);
   }
 
-  function clearRange(startIso: string, endIso: string, months: { y: number; m: number }[]) {
+  async function clearRange(startIso: string, endIso: string, months: { y: number; m: number }[]) {
     const skipByRec = new Map<string, string[]>();
     for (const r of recurrences) {
       const dates: string[] = [];
@@ -1252,7 +1274,7 @@ function IndexForUser({ userId }: { userId: string }) {
       }
       if (dates.length) skipByRec.set(r.id, dates);
     }
-    commit(
+    await commit(
       entries.filter((e) => e.date < startIso || e.date > endIso),
       recurrences.map((r) => {
         const dates = skipByRec.get(r.id);
@@ -1261,9 +1283,9 @@ function IndexForUser({ userId }: { userId: string }) {
     );
   }
 
-  function clearMonth() {
+  async function clearMonth() {
     const last = new Date(cursor.y, cursor.m + 1, 0).getDate();
-    clearRange(iso(cursor.y, cursor.m, 1), iso(cursor.y, cursor.m, last), [
+    await clearRange(iso(cursor.y, cursor.m, 1), iso(cursor.y, cursor.m, last), [
       { y: cursor.y, m: cursor.m },
     ]);
   }
@@ -1271,9 +1293,9 @@ function IndexForUser({ userId }: { userId: string }) {
   function resetCalendar(scope: "month" | "all") {
     const snapshot = { entries, recurrences, forecastItems, history };
     if (scope === "month") {
-      clearMonth();
+      void clearMonth();
     } else {
-      deleteAll();
+      void deleteAll();
       setHistory([]);
     }
     return () => {
@@ -1425,7 +1447,7 @@ function IndexForUser({ userId }: { userId: string }) {
             const isRec = !!j.item.recurrenceId;
             const run = (action: "save" | "undo") => {
               if (isRec) setHorizonJump({ ...j, ask: action, error: null });
-              else applyHorizonJump(action, "day");
+              else void applyHorizonJump(action, "day");
             };
             return (
               <AddWindow
@@ -1458,14 +1480,14 @@ function IndexForUser({ userId }: { userId: string }) {
                       </p>
                       <button
                         type="button"
-                        onClick={() => applyHorizonJump(j.ask!, "day")}
+                        onClick={() => void applyHorizonJump(j.ask!, "day")}
                         className="h-11 w-full rounded-xl bg-primary/10 text-sm font-semibold text-primary hover:bg-primary/20"
                       >
                         só este dia
                       </button>
                       <button
                         type="button"
-                        onClick={() => applyHorizonJump(j.ask!, "all")}
+                        onClick={() => void applyHorizonJump(j.ask!, "all")}
                         className="h-11 w-full rounded-xl bg-warning/20 text-sm font-semibold text-warning-foreground hover:bg-warning/30"
                       >
                         todas as repetições
@@ -1697,7 +1719,7 @@ function IndexForUser({ userId }: { userId: string }) {
                     key: "occurrence",
                     label: "apagar só este lançamento",
                     onSelect: () => {
-                      skipOccurrence(activeItem.recurrenceId ?? "", activeItem.date);
+                      void skipOccurrence(activeItem.recurrenceId ?? "", activeItem.date);
                       closeWindow();
                     },
                   },
@@ -1706,7 +1728,7 @@ function IndexForUser({ userId }: { userId: string }) {
                     label: "apagar desta data em diante",
                     tone: "warning" as const,
                     onSelect: () => {
-                      endRecurrenceFrom(activeItem.recurrenceId ?? "", activeItem.date);
+                      void endRecurrenceFrom(activeItem.recurrenceId ?? "", activeItem.date);
                       closeWindow();
                     },
                   },
@@ -1714,7 +1736,7 @@ function IndexForUser({ userId }: { userId: string }) {
                     key: "recurrence",
                     label: "apagar recorrência inteira",
                     onSelect: () => {
-                      removeRecurrence(activeItem.recurrenceId ?? "");
+                      void removeRecurrence(activeItem.recurrenceId ?? "");
                       closeWindow();
                     },
                   },
@@ -1724,7 +1746,7 @@ function IndexForUser({ userId }: { userId: string }) {
                     key: "entry",
                     label: "apagar lançamento",
                     onSelect: () => {
-                      deleteItems([activeItem]);
+                      void deleteItems([activeItem]);
                       closeWindow();
                     },
                   },
@@ -1955,7 +1977,7 @@ function IndexForUser({ userId }: { userId: string }) {
                             setForecastShake((n) => n + 1);
                             return;
                           }
-                          setForecastDay(formDate, v);
+                          void setForecastDay(formDate, v);
                           setForecastSpent("");
                           closeWindow();
                         };
@@ -2006,7 +2028,7 @@ function IndexForUser({ userId }: { userId: string }) {
                         <button
                           type="button"
                           onClick={() => {
-                            setForecastDay(formDate, undefined);
+                            void setForecastDay(formDate, undefined);
                             setForecastSpent("");
                             setForecastRestoring(true);
                           }}
@@ -2021,7 +2043,7 @@ function IndexForUser({ userId }: { userId: string }) {
                             <button
                               type="button"
                               onClick={() => {
-                                setForecastDay(formDate, null);
+                                void setForecastDay(formDate, null);
                                 setForecastConfirm(false);
                                 closeWindow();
                               }}
@@ -2122,7 +2144,7 @@ function IndexForUser({ userId }: { userId: string }) {
             )}
 
             {(windowMode === "add" || windowMode === "edit") && (
-            <form onSubmit={saveEntry} onKeyDown={submitFormOnEnter} className="space-y-3">
+            <form onSubmit={(e) => void saveEntry(e)} onKeyDown={submitFormOnEnter} className="space-y-3">
               <div className="rounded-2xl bg-card p-4">
                 <span className="text-xs font-medium text-muted-foreground">
                   {freq !== "unico" ? "valor da parcela" : "valor"}
