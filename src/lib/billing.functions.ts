@@ -112,27 +112,54 @@ export const getCheckoutSessionEmail = createServerFn({ method: "POST" })
   });
 
 export const activatePendingSubscription = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ token: z.string().min(10), sessionId: z.string().min(5).optional() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(10).optional(), sessionId: z.string().min(5).optional() }).parse(d))
   .handler(async ({ data }) => {
-    const { db, user } = await verifyUser(data.token);
     if (!data.sessionId) return { activated: false };
 
     const key = process.env["STRIPE_SECRET_KEY"];
     if (!key) return { activated: false };
 
+    const db = await admin();
+
     try {
       const session = await fetch(`https://api.stripe.com/v1/checkout/sessions/${data.sessionId}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${key}` },
-      }).then((r) => r.json()) as { payment_status?: string; subscription?: string; customer?: string };
+      }).then((r) => r.json()) as { 
+        payment_status?: string; 
+        subscription?: string; 
+        customer?: string; 
+        client_reference_id?: string;
+        customer_details?: { email?: string };
+        customer_email?: string;
+      };
 
       if (session.payment_status === "paid" && session.subscription) {
-        await upsertByUser(db, user.id, {
-          status: "active",
-          stripe_customer_id: session.customer ?? null,
-          stripe_subscription_id: session.subscription,
-        });
-        return { activated: true };
+        let targetUserId = session.client_reference_id;
+
+        if (!targetUserId) {
+          const email = session.customer_details?.email || session.customer_email;
+          if (email) {
+            const { data: profileByEmail } = await db.from("subscriptions").select("user_id").eq("email", email.trim()).maybeSingle();
+            if (profileByEmail?.user_id) {
+              targetUserId = profileByEmail.user_id;
+            } else if (data.token) {
+              try {
+                const verified = await verifyUser(data.token);
+                targetUserId = verified.user.id;
+              } catch { /* ignora */ }
+            }
+          }
+        }
+
+        if (targetUserId) {
+          await upsertByUser(db, targetUserId, {
+            status: "active",
+            stripe_customer_id: session.customer ?? null,
+            stripe_subscription_id: session.subscription,
+          });
+          return { activated: true };
+        }
       }
     } catch (err) {
       console.error("Erro ao ativar assinatura pendente:", err);
