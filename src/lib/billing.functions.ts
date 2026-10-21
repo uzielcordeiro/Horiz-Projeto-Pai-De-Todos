@@ -43,7 +43,6 @@ export const getAccount = createServerFn({ method: "POST" })
     return { user_id: user.id, email: user.email ?? "", status: (row?.status as string | null) ?? null, full_name: (row?.full_name as string | null) ?? "", whatsapp: (row?.whatsapp as string | null) ?? "" };
   });
 
-/** Perfil + assinatura do usuário autenticado, como devolvido por getAccount. */
 export type Account = Awaited<ReturnType<typeof getAccount>>;
 
 export const saveProfile = createServerFn({ method: "POST" })
@@ -64,7 +63,6 @@ export const createCheckout = createServerFn({ method: "POST" })
     const key = process.env["STRIPE_SECRET_KEY"];
     if (!key) throw new Error("STRIPE_SECRET_KEY ausente");
 
-    // Se houver usuário logado, usa o e-mail dele. Se for checkout público, injeta session_id do Stripe
     const successUrl = user?.email
       ? `${data.origin}/login?tab=register&email=${encodeURIComponent(user.email)}`
       : `${data.origin}/login?tab=register&session_id={CHECKOUT_SESSION_ID}`;
@@ -94,7 +92,6 @@ export const createCheckout = createServerFn({ method: "POST" })
     return { url: res.url };
   });
 
-// Nova função para buscar o e-mail diretamente no Stripe usando o session_id
 export const getCheckoutSessionEmail = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ sessionId: z.string().min(5) }).parse(d))
   .handler(async ({ data }) => {
@@ -112,4 +109,33 @@ export const getCheckoutSessionEmail = createServerFn({ method: "POST" })
 
     const email = res.customer_details?.email || res.customer_email || "";
     return { email };
+  });
+
+export const activatePendingSubscription = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(10), sessionId: z.string().min(5).optional() }).parse(d))
+  .handler(async ({ data }) => {
+    const { db, user } = await verifyUser(data.token);
+    if (!data.sessionId) return { activated: false };
+
+    const key = process.env["STRIPE_SECRET_KEY"];
+    if (!key) return { activated: false };
+
+    try {
+      const session = await fetch(`https://api.stripe.com/v1/checkout/sessions/${data.sessionId}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${key}` },
+      }).then((r) => r.json()) as { payment_status?: string; subscription?: string; customer?: string };
+
+      if (session.payment_status === "paid" && session.subscription) {
+        await upsertByUser(db, user.id, {
+          status: "active",
+          stripe_customer_id: session.customer ?? null,
+          stripe_subscription_id: session.subscription,
+        });
+        return { activated: true };
+      }
+    } catch (err) {
+      console.error("Erro ao ativar assinatura pendente:", err);
+    }
+    return { activated: false };
   });
