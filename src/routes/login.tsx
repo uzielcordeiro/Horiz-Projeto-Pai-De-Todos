@@ -59,6 +59,13 @@ export function LoginPage() {
     const rawEmail = params.get("email");
     const sessionId = params.get("session_id");
 
+    // Captura e salva UTMs da URL no localStorage de forma silenciosa
+    const utmParams = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+    utmParams.forEach((param) => {
+      const val = params.get(param);
+      if (val) localStorage.setItem(`horiz_${param}`, val);
+    });
+
     const isCheckoutFlow =
       urlTab === "register" ||
       urlTab === "up" ||
@@ -120,7 +127,6 @@ export function LoginPage() {
   async function enterApp(token?: string, sessionIdToActivate?: string) {
     setBusy(true);
     try {
-      // Se houver um session_id pendente na URL, ativa a assinatura imediatamente antes de entrar no app
       const activeSessionId = sessionIdToActivate || new URLSearchParams(window.location.search).get("session_id");
       if (activeSessionId) {
         try {
@@ -166,15 +172,28 @@ export function LoginPage() {
         localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
         localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
       } catch { /* ignore */ }
-      await enterApp(data?.session?.access_token, sessionId);
+      
+      if (data?.session) {
+        await enterApp(data.session.access_token, sessionId);
+      }
     } else {
+      // Puxa as UTMs do armazenamento local para enviar ao Supabase
+      const utms = {
+        utm_source: localStorage.getItem("horiz_utm_source") || undefined,
+        utm_medium: localStorage.getItem("horiz_utm_medium") || undefined,
+        utm_campaign: localStorage.getItem("horiz_utm_campaign") || undefined,
+        utm_content: localStorage.getItem("horiz_utm_content") || undefined,
+        utm_term: localStorage.getItem("horiz_utm_term") || undefined,
+      };
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { 
           data: { 
             full_name: fullName.trim(), 
-            whatsapp: whatsapp.trim() 
+            whatsapp: whatsapp.trim(),
+            ...utms
           }, 
           emailRedirectTo: `${window.location.origin}/login?tab=login&email=${encodeURIComponent(email)}${sessionId ? `&session_id=${sessionId}` : ""}` 
         },
