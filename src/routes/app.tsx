@@ -341,26 +341,39 @@ function IndexForUser({ userId }: { userId: string }) {
     let cancelled = false;
     async function loadFromSupabase() {
       if (!userId) return;
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("date", { ascending: false });
+
+      const [txRes, recRes, castRes] = await Promise.all([
+        supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
+        supabase.from("recurrences").select("payload").eq("user_id", userId),
+        supabase.from("forecasts").select("payload").eq("user_id", userId)
+      ]);
 
       if (cancelled) return;
-      if (error) {
-        console.error("Erro ao carregar transações do Supabase:", error);
-      } else if (data) {
-        const mappedEntries: Entry[] = data.map((item) => ({
-          id: item.id,
-          amount: item.amount,
-          date: item.date,
-          label: item.description || "Lançamento",
-          kind: (item.type as Kind) || "entradas",
-          tags: item.marketing_tags ?? [],
-        }));
+
+      if (txRes.data) {
+        const mappedEntries: Entry[] = txRes.data.map((item) => {
+          const rawTags = item.marketing_tags ?? [];
+          return {
+            id: item.id,
+            amount: item.amount,
+            date: item.date,
+            label: item.description || "Lançamento",
+            kind: (item.type as Kind) || "entradas",
+            tags: rawTags.filter((t: string) => t !== "horizon_transfer"),
+            horizonTransfer: rawTags.includes("horizon_transfer"),
+          };
+        });
         setEntries(mappedEntries);
       }
+
+      if (recRes.data) {
+        setRecurrences(recRes.data.map((r) => r.payload as Recurrence));
+      }
+
+      if (castRes.data) {
+        setForecastItems(castRes.data.map((c) => c.payload as ForecastItem));
+      }
+
       setLoaded(true);
     }
     void loadFromSupabase();
@@ -414,50 +427,88 @@ function IndexForUser({ userId }: { userId: string }) {
     });
   }, [forecastItems, loaded]);
 
-  async function commit(nextEntries: Entry[], nextRecurrences: Recurrence[]) {
+  async function commit(nextEntries: Entry[], nextRecurrences: Recurrence[], customForecasts?: ForecastItem[]) {
     setHistory((h) => [...h.slice(-19), { entries, recurrences }]);
-
-    // Identificar itens removidos para sincronizar o DELETE com o Supabase
-    if (userId) {
-      const currentIds = new Set(nextEntries.map((e) => e.id));
-      const removedEntries = entries.filter((e) => !currentIds.has(e.id));
-
-      if (removedEntries.length > 0) {
-        const removedIds = removedEntries.map((e) => e.id);
-        const { error: deleteErr } = await supabase
-          .from("transactions")
-          .delete()
-          .eq("user_id", userId)
-          .in("id", removedIds);
-
-        if (deleteErr) {
-          console.error("Erro ao deletar transação no Supabase:", deleteErr);
-        }
-      }
-    }
-
     setEntries(nextEntries);
     setRecurrences(nextRecurrences);
+    
+    if (customForecasts) {
+      setForecastItems(customForecasts);
+    }
 
-    // Se houver nova entrada adicionada, persiste diretamente no Supabase
-    if (userId && nextEntries.length > entries.length) {
-      const latestEntry = nextEntries[nextEntries.length - 1];
-      if (latestEntry) {
-        const { error: insertErr } = await supabase.from("transactions").insert([
-          {
-            id: latestEntry.id,
-            user_id: userId,
-            amount: latestEntry.amount,
-            type: latestEntry.kind,
-            date: latestEntry.date,
-            description: latestEntry.label,
-            marketing_tags: latestEntry.tags ?? [],
-          },
-        ]);
-        if (insertErr) {
-          console.error("Erro ao salvar transação no Supabase:", insertErr);
-        }
-      }
+    if (!userId) return;
+
+    // Sincronizar transactions (lançamentos únicos)
+    const currentTxIds = new Set(nextEntries.map((e) => e.id));
+    const txToRemove = entries.filter((e) => !currentTxIds.has(e.id)).map(e => e.id);
+    
+    const txUpserts = nextEntries.map((e) => {
+      const finalTags = e.tags ? [...e.tags] : [];
+      if (e.horizonTransfer && !finalTags.includes("horizon_transfer")) finalTags.push("horizon_transfer");
+      return {
+        id: e.id,
+        user_id: userId,
+        amount: e.amount,
+        type: e.kind,
+        date: e.date,
+        description: e.label,
+        marketing_tags: finalTags,
+      };
+    });
+
+    if (txToRemove.length > 0) {
+      supabase.from("transactions").delete().eq("user_id", userId).in("id", txToRemove).then(({ error }) => {
+         if (error) console.error("Erro ao deletar transações:", error);
+      });
+    }
+    if (txUpserts.length > 0) {
+      supabase.from("transactions").upsert(txUpserts).then(({ error }) => {
+         if (error) console.error("Erro ao upsert transações:", error);
+      });
+    }
+
+    // Sincronizar recurrences (recorrências e parcelamentos)
+    const currentRecIds = new Set(nextRecurrences.map((r) => r.id));
+    const recToRemove = recurrences.filter((r) => !currentRecIds.has(r.id)).map(r => r.id);
+    
+    const recUpserts = nextRecurrences.map((r) => ({
+      id: r.id,
+      user_id: userId,
+      payload: r as unknown as object,
+    }));
+
+    if (recToRemove.length > 0) {
+      supabase.from("recurrences").delete().eq("user_id", userId).in("id", recToRemove).then(({ error }) => {
+         if (error) console.error("Erro ao deletar recorrências:", error);
+      });
+    }
+    if (recUpserts.length > 0) {
+      supabase.from("recurrences").upsert(recUpserts).then(({ error }) => {
+         if (error) console.error("Erro ao upsert recorrências:", error);
+      });
+    }
+    
+    // Sincronizar forecasts se passado no parâmetro
+    if (customForecasts) {
+       const currentCastIds = new Set(customForecasts.map((c) => c.id));
+       const castToRemove = forecastItems.filter((c) => !currentCastIds.has(c.id)).map(c => c.id);
+       
+       const castUpserts = customForecasts.map((c) => ({
+         id: c.id,
+         user_id: userId,
+         payload: c as unknown as object,
+       }));
+
+       if (castToRemove.length > 0) {
+         supabase.from("forecasts").delete().eq("user_id", userId).in("id", castToRemove).then(({ error }) => {
+            if (error) console.error("Erro ao deletar previsões:", error);
+         });
+       }
+       if (castUpserts.length > 0) {
+         supabase.from("forecasts").upsert(castUpserts).then(({ error }) => {
+            if (error) console.error("Erro ao upsert previsões:", error);
+         });
+       }
     }
   }
 
@@ -530,16 +581,18 @@ function IndexForUser({ userId }: { userId: string }) {
     };
     const apply = <T extends { tags?: string[] }>(x: T): T =>
       x.tags?.includes(oldTag) ? { ...x, tags: swap(x.tags) } : x;
-    setEntries((prev) => prev.map(apply));
-    setRecurrences((prev) => prev.map(apply));
+    const nextEntries = entries.map(apply);
+    const nextRecurrences = recurrences.map(apply);
+    void commit(nextEntries, nextRecurrences);
     setTags((prev) => swap(prev));
   }
 
   function deleteTag(tag: string) {
     const strip = <T extends { tags?: string[] }>(x: T): T =>
       x.tags?.includes(tag) ? { ...x, tags: x.tags.filter((t) => t !== tag) } : x;
-    setEntries((prev) => prev.map(strip));
-    setRecurrences((prev) => prev.map(strip));
+    const nextEntries = entries.map(strip);
+    const nextRecurrences = recurrences.map(strip);
+    void commit(nextEntries, nextRecurrences);
     setTags((prev) => prev.filter((t) => t !== tag));
   }
 
@@ -1118,8 +1171,8 @@ function IndexForUser({ userId }: { userId: string }) {
       await commit(
         entries.filter((e) => !entryIds.has(e.id)),
         recurrences.filter((r) => r.id !== FORECAST_ID),
+        []
       );
-      setForecastItems([]);
       return;
     }
     await commit(
@@ -1188,8 +1241,8 @@ function IndexForUser({ userId }: { userId: string }) {
     await commit(
       entries,
       recurrences.filter((r) => r.id !== recurrenceId),
+      recurrenceId === FORECAST_ID ? [] : undefined
     );
-    if (recurrenceId === FORECAST_ID) setForecastItems([]);
   }
 
   function jumpToHorizon(item: DayItem) {
@@ -1259,8 +1312,7 @@ function IndexForUser({ userId }: { userId: string }) {
   }
 
   async function deleteAll() {
-    await commit([], []);
-    setForecastItems([]);
+    await commit([], [], []);
   }
 
   async function clearRange(startIso: string, endIso: string, months: { y: number; m: number }[]) {
@@ -1560,13 +1612,16 @@ function IndexForUser({ userId }: { userId: string }) {
             items={forecastItems}
             year={today.getFullYear()}
             month={today.getMonth()}
-            onSave={(item) =>
-              setForecastItems((prev) => {
-                const exists = prev.some((p) => p.id === item.id);
-                return exists ? prev.map((p) => (p.id === item.id ? item : p)) : [...prev, item];
-              })
-            }
-            onDelete={(id) => setForecastItems((prev) => prev.filter((p) => p.id !== id))}
+            onSave={(item) => {
+              const customForecasts = forecastItems.some((p) => p.id === item.id)
+                ? forecastItems.map((p) => (p.id === item.id ? item : p))
+                : [...forecastItems, item];
+              void commit(entries, recurrences, customForecasts);
+            }}
+            onDelete={(id) => {
+               const customForecasts = forecastItems.filter((p) => p.id !== id);
+               void commit(entries, recurrences, customForecasts);
+            }}
           />
         ) : view === "tags" ? (
           <TagsBoard
