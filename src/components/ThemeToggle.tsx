@@ -3,11 +3,20 @@ import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
+  // 1. Ao carregar, verifica se existe a palavra "dark" guardada no localStorage
+  const [dark, setDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("theme") === "dark";
+    }
+    return false;
+  });
 
   useEffect(() => {
+    // 2. Aplica ou remove a classe visual no HTML, mantendo a sua função intacta
     document.documentElement.classList.toggle("dark", dark);
-    return () => document.documentElement.classList.remove("dark");
+    
+    // 3. Grava a escolha atual na memória do navegador
+    localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
 
   const label = dark ? "Ativar modo claro" : "Ativar modo escuro";
