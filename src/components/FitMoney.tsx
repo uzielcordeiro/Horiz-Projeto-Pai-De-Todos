@@ -1,9 +1,11 @@
 import { brl, compactBrl } from "@/lib/money-format";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Exibe o valor formatado. Se o valor (absoluto) for maior ou igual ao
  * limite (threshold), ele é abreviado (ex: 5,25k) e ganha um tooltip CSS
- * 100% instantâneo mostrando o valor exato, sem linhas ou cursores nativos.
+ * renderizado via Portal (garantindo que nunca seja cortado por tabelas).
  */
 export function FitMoney({
   value,
@@ -21,22 +23,56 @@ export function FitMoney({
   
   const displayText = isLarge ? compactBrl(value, symbol) : fullText;
 
+  // Estados para controlar o tooltip instantâneo e sua posição
+  const [show, setShow] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Garante que o Portal só será invocado no client-side para evitar erros
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (!isLarge || !spanRef.current) return;
+    const rect = spanRef.current.getBoundingClientRect();
+    setCoords({
+      top: rect.top,
+      left: rect.left + rect.width / 2, // Centraliza no meio da palavra
+    });
+    setShow(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShow(false);
+  };
+
   return (
-    <span
-      className={`relative inline-block whitespace-nowrap ${
-        isLarge ? "group" : ""
-      }`}
-    >
-      {displayText}
-      
-      {/* Tooltip Customizado Instantâneo */}
-      {isLarge && (
-        <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs font-semibold text-background opacity-0 transition-none group-hover:visible group-hover:opacity-100">
-          {fullText}
-          {/* Triângulo do balãozinho */}
-          <span className="absolute left-1/2 top-full -translate-x-1/2 border-[4px] border-transparent border-t-foreground" />
-        </span>
-      )}
-    </span>
+    <>
+      <span
+        ref={spanRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="relative inline-block whitespace-nowrap"
+      >
+        {displayText}
+      </span>
+
+      {/* Renderiza o Tooltip na raiz do documento para ignorar qualquer barreira de layout */}
+      {mounted && isLarge && show &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[9999] -translate-x-1/2 -translate-y-full pb-1.5"
+            style={{ top: coords.top, left: coords.left }}
+          >
+            <div className="relative whitespace-nowrap rounded bg-foreground px-2 py-1 text-xs font-semibold text-background shadow-lg">
+              {fullText}
+              <span className="absolute left-1/2 top-full -translate-x-1/2 border-[4px] border-transparent border-t-foreground" />
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
