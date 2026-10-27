@@ -1398,7 +1398,7 @@ function IndexForUser({ userId }: { userId: string }) {
           <div className="space-y-3">
             <Button
               onClick={() => {
-                window.location.href = "COLE_AQUI_O_LINK_DO_SEU_PORTAL_STRIPE";
+                window.location.href = "https://billing.stripe.com/p/login/test_3cI3cwdSu3nv4mxgdybQY00";
               }}
               className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90"
             >
