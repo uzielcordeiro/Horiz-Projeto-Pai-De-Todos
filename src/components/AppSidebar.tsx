@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 
 type Item = { key: string; label: string; icon: React.ReactNode; soon?: boolean };
 
+// 1. Bloco de cima atualizado: Conta, Resumo, Tags, Dia/Dia
 const NAV: Item[] = [
   { key: "perfil", label: "Conta", icon: <UserRound size={16} strokeWidth={2} /> },
-  { key: "saldos", label: "Calendário", icon: <Wallet size={16} strokeWidth={2} /> },
   { key: "totais", label: "Resumo", icon: <Table2 size={16} strokeWidth={2} /> },
   { key: "tags", label: "Tags", icon: <Tag size={16} strokeWidth={2} /> },
   { key: "menu", label: "Dia/Dia", icon: <NotebookPen size={16} strokeWidth={2} /> },
@@ -27,16 +27,11 @@ export function AppSidebar({
   active?: string;
 }) {
   const [open, setOpen] = useState(true);
-  // Pair each immediate pointerdown activation with its own native click.
-  // Tracking the browser pointer id prevents rapid presses on different rows
-  // from consuming each other's fallback clicks.
   const pending = useRef(new Map<string, Map<number, number>>());
 
   const row =
     "flex w-full cursor-pointer touch-manipulation select-none items-center gap-3 rounded-xl px-2 py-2 text-left text-sm font-medium transition-colors";
 
-  // Keep both events: pointerdown gives immediate response, while click is a
-  // browser-native fallback if a rapid pointer sequence drops pointerdown.
   const activatePointer =
     (actionName: string, action: () => void) => (event: PointerEvent<HTMLButtonElement>) => {
       if (!event.isPrimary || event.button !== 0) return;
@@ -45,7 +40,6 @@ export function AppSidebar({
       pending.current.set(actionName, actionPointers);
       action();
     };
-
 
   const activateClick =
     (actionName: string, action: () => void) => (event: MouseEvent<HTMLButtonElement>) => {
@@ -60,7 +54,6 @@ export function AppSidebar({
       }
       action();
     };
-
 
   return (
     <aside
@@ -110,7 +103,24 @@ export function AppSidebar({
         ))}
       </nav>
 
+      {/* 2. Bloco de baixo atualizado: Calendário, Novo, Hoje, Projeção */}
       <div className="mt-6 space-y-1 border-t border-border px-2 pt-4">
+        <button
+          type="button"
+          data-sidebar-action="saldos"
+          onPointerDown={activatePointer("saldos", () => onNavigate?.("saldos"))}
+          onClick={activateClick("saldos", () => onNavigate?.("saldos"))}
+          aria-label="Calendário"
+          title="Calendário"
+          className={`${row} ${
+            active === "saldos"
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+          }`}
+        >
+          <span className="flex w-4 shrink-0 justify-center"><Wallet size={16} strokeWidth={2} /></span>
+          {open && <span className="truncate">Calendário</span>}
+        </button>
         <button
           type="button"
           data-sidebar-action="adicionar"
@@ -140,8 +150,8 @@ export function AppSidebar({
           data-sidebar-action="horizonte"
           onPointerDown={activatePointer("horizonte", () => onNavigate?.("horizonte"))}
           onClick={activateClick("horizonte", () => onNavigate?.("horizonte"))}
-          aria-label="Futuro"
-          title="Futuro"
+          aria-label="Projeção"
+          title="Projeção"
           className={`${row} ${
             active === "horizonte"
               ? "bg-accent text-accent-foreground"
@@ -149,7 +159,7 @@ export function AppSidebar({
           }`}
         >
           <span className="flex w-4 shrink-0 justify-center"><MapIcon size={16} strokeWidth={2} /></span>
-          {open && <span className="truncate">Futuro</span>}
+          {open && <span className="truncate">Projeção</span>}
         </button>
       </div>
 
