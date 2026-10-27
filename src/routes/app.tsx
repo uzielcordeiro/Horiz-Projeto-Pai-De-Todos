@@ -286,6 +286,7 @@ function IndexForUser({ userId }: { userId: string }) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [recurrences, setRecurrences] = useState<Recurrence[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [cursor, setCursor] = useState({ y: today.getFullYear(), m: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
@@ -336,19 +337,26 @@ function IndexForUser({ userId }: { userId: string }) {
   } | null>(null);
   const [horizonHighlight, setHorizonHighlight] = useState<string | null>(null);
 
-  // Carregar dados diretamente do Supabase na inicialização
+  // Carregar dados diretamente do Supabase na inicialização, incluindo status da assinatura
   useLayoutEffect(() => {
     let cancelled = false;
     async function loadFromSupabase() {
       if (!userId) return;
 
-      const [txRes, recRes, castRes] = await Promise.all([
+      const [txRes, recRes, castRes, subRes] = await Promise.all([
         supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
         supabase.from("recurrences").select("payload").eq("user_id", userId),
-        supabase.from("forecasts").select("payload").eq("user_id", userId)
+        supabase.from("forecasts").select("payload").eq("user_id", userId),
+        supabase.from("subscriptions").select("status").eq("user_id", userId).maybeSingle()
       ]);
 
       if (cancelled) return;
+      
+      if (subRes.data) {
+        setSubscriptionStatus(subRes.data.status);
+      } else {
+        setSubscriptionStatus("inactive");
+      }
 
       if (txRes.data) {
         const mappedEntries: Entry[] = txRes.data.map((item) => {
@@ -1375,6 +1383,39 @@ function IndexForUser({ userId }: { userId: string }) {
   const isSaldos = view === "saldos" && !adding;
 
   if (!loaded) return <LoadingScreen />;
+
+  if (subscriptionStatus !== "active" && subscriptionStatus !== "trialing") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-full bg-negative/10">
+            <span aria-hidden className="font-display text-2xl font-bold text-negative">!</span>
+          </div>
+          <h1 className="mb-3 font-display text-2xl font-semibold text-foreground">Acesso Suspenso</h1>
+          <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+            Identificamos uma pendência no seu último pagamento ou sua assinatura expirou. Atualize sua forma de pagamento no nosso portal para liberar o seu calendário e continuar gerenciando o seu futuro.
+          </p>
+          <div className="space-y-3">
+            <Button
+              onClick={() => {
+                window.location.href = "COLE_AQUI_O_LINK_DO_SEU_PORTAL_STRIPE";
+              }}
+              className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Atualizar Pagamento
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => supabase.auth.signOut()}
+              className="h-12 w-full rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              Sair da conta
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
