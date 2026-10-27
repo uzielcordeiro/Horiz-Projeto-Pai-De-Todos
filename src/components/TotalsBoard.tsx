@@ -178,7 +178,7 @@ export function TotalsBoard({
                   {l.title}
                 </span>
                 <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                  <FitMoney value={totals[l.key]} />
+                  <FitMoney value={totals[l.key]} threshold={1000000} />
                 </span>
               </button>
             ))}
@@ -195,7 +195,7 @@ export function TotalsBoard({
             <span className="text-muted-foreground">× {daysInMonth} dias</span>
           </span>
           <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-            <FitMoney value={forecastPerDay} />
+            <FitMoney value={forecastPerDay} threshold={1000000} />
           </span>
         </div>
       </div>
@@ -243,7 +243,7 @@ export function TotalsBoard({
                     : list;
                 return (
                   <div className="space-y-3">
-                         {visible.map((it, i) => (
+                    {visible.map((it, i) => (
                       <div
                         key={`${it.date}-${i}`}
                         className="rounded-2xl border border-border bg-background p-4"
@@ -264,7 +264,7 @@ export function TotalsBoard({
                           <span
                             className={`ml-auto shrink-0 text-sm font-semibold tabular-nums ${valueTone[openKind]}`}
                           >
-                            <FitMoney value={it.amount} />
+                            <FitMoney value={it.amount} threshold={1000000} />
                           </span>
                         </div>
                       </div>
