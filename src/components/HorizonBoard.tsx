@@ -28,7 +28,7 @@ const cell: Record<Status, string> = {
 
 /** mesmas cores dos dias do quadro, na ordem vermelho → amarelo → verde-claro → verde-escuro */
 const legend: { label: string; dotClass: string }[] = [
-  { label: "negativo", dotClass: "bg-horizon-negative-cell" },
+  { label: "R$ 999 negativo ou menos", dotClass: "bg-horizon-negative-cell" },
   { label: "R$ 1.000 negativo ou mais", dotClass: "bg-horizon-debt-cell" },
   { label: "entre R$ 0 e R$ 1.000", dotClass: "bg-horizon-warning-cell" },
   { label: "R$ 1.000 até R$ 2.000", dotClass: "bg-horizon-positive-cell" },
