@@ -116,7 +116,7 @@ export function TotalsBoard({
                 <Dot k="cartao" />－<Dot k="economias" />
               </>
             }
-            value=<FitMoney value={performance} />
+            value={<FitMoney value={performance} threshold={1000000} />}
             hint={performance === 0 ? "zerado" : performance > 0 ? "sobrando" : "no vermelho"}
             tone={
               performance === 0
@@ -135,7 +135,7 @@ export function TotalsBoard({
                 <Dot k="entradas" />
               </>
             }
-            value=<FitMoney value={totals.economias} />
+            value={<FitMoney value={totals.economias} threshold={1000000} />}
             hint={`poupando ${Math.round(economizado).toLocaleString("pt-BR")}% do seu salário`}
           />
           <Card
@@ -145,7 +145,7 @@ export function TotalsBoard({
                 <Dot k="saidas" />＋<Dot k="diarios" />＋<Dot k="cartao" />
               </>
             }
-            value=<FitMoney value={custoVida} />
+            value={<FitMoney value={custoVida} threshold={1000000} />}
             hint={custoVida === 0 ? "zerado" : "somatório dos gastos do mês"}
           />
           <Card
@@ -156,7 +156,7 @@ export function TotalsBoard({
                 <span>/ {diaryDays || 0}</span>
               </>
             }
-            value=<FitMoney value={diarioMedio} />
+            value={<FitMoney value={diarioMedio} threshold={1000000} />}
             hint={`diários lançados: ${brl(totals.diarios)}`}
           />
         </div>
