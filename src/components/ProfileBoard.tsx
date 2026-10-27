@@ -3,14 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSignOut } from "@/lib/session";
 import { SigningOut } from "@/components/SigningOut";
 import { getAccount, saveProfile } from "@/lib/billing.functions";
-import { Check, ChevronRight, CircleHelp, FileText, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { Check, ChevronRight, PlaySquare, FileText, LogOut, ShieldCheck, UserRound, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddWindow } from "@/components/AddWindow";
 
 const OPTIONS = [
   { key: "edit", label: "editar perfil", icon: UserRound },
-  { key: "settings", label: "configurações", icon: Settings },
-  { key: "help", label: "ajuda", icon: CircleHelp },
+  { key: "help", label: "como usar", icon: PlaySquare },
   { key: "terms", label: "termos de uso", icon: FileText },
   { key: "privacy", label: "política de privacidade", icon: ShieldCheck },
   { key: "exit", label: "sair", icon: LogOut },
@@ -18,16 +17,9 @@ const OPTIONS = [
 
 type OptionKey = typeof OPTIONS[number]["key"];
 
-const PENDING_TEXT = {
-  settings: "As configurações da conta ainda não foram definidas.",
-  help: "O conteúdo de ajuda ainda não foi definido.",
-  terms: "Os termos de uso ainda não foram disponibilizados.",
-  privacy: "A política de privacidade ainda não foi disponibilizada.",
-};
-
 export function ProfileBoard() {
   const { signingOut, signOut } = useSignOut();
-  const [profile, setProfile] = useState({ name: "", email: "", whatsapp: "" });
+  const [profile, setProfile] = useState({ name: "", email: "" });
   const [saveErr, setSaveErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,11 +31,10 @@ export function ProfileBoard() {
       const sessionName = session.user?.user_metadata?.full_name ?? sessionEmail;
 
       // Define os dados imediatamente usando a sessão local do Supabase
-      setProfile((prev) => ({
-        ...prev,
+      setProfile({
         name: sessionName,
         email: sessionEmail,
-      }));
+      });
 
       // Busca dados complementares do servidor sem travar a interface
       try {
@@ -53,7 +44,6 @@ export function ProfileBoard() {
           setProfile({
             name: a.full_name || sessionName,
             email: a.email || sessionEmail,
-            whatsapp: a.whatsapp || "",
           });
         }
       } catch {
@@ -104,22 +94,19 @@ export function ProfileBoard() {
           {selected === "edit" ? (
             <form className="space-y-4" onSubmit={async (event) => {
               event.preventDefault();
-              if (!draft.name.trim() || !draft.whatsapp.trim()) return;
+              if (!draft.name.trim()) return;
               setSaveErr(null);
               try {
                 const { data } = await supabase.auth.getSession();
-                await saveProfile({ data: { token: data.session?.access_token ?? "", full_name: draft.name.trim(), whatsapp: draft.whatsapp.trim() } });
-                setProfile({ ...profile, name: draft.name.trim(), whatsapp: draft.whatsapp.trim() });
+                // Salvamos o whatsapp vazio para não quebrar a tipagem do backend se ela exigir
+                await saveProfile({ data: { token: data.session?.access_token ?? "", full_name: draft.name.trim(), whatsapp: "" } });
+                setProfile({ ...profile, name: draft.name.trim() });
                 setSelected(null);
               } catch (x) { setSaveErr((x as Error).message); }
             }}>
               <label className="block space-y-2 text-sm text-muted-foreground">
                 <span>nome</span>
                 <input autoFocus required maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-foreground outline-none focus:border-primary" />
-              </label>
-              <label className="block space-y-2 text-sm text-muted-foreground">
-                <span>WhatsApp</span>
-                <input required type="tel" minLength={8} maxLength={20} value={draft.whatsapp} onChange={(event) => setDraft({ ...draft, whatsapp: event.target.value })} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-foreground outline-none focus:border-primary" />
               </label>
               {saveErr && <p className="text-sm text-destructive">{saveErr}</p>}
               <Button type="submit" className="w-full">salvar</Button>
@@ -132,9 +119,52 @@ export function ProfileBoard() {
                 <Button onClick={handleSignOut} disabled={signingOut}>sair</Button>
               </div>
             </div>
-          ) : (
-            <p className="text-sm leading-relaxed text-muted-foreground">{PENDING_TEXT[selected]}</p>
-          )}
+          ) : selected === "help" ? (
+            <div className="space-y-4">
+               <p className="text-sm leading-relaxed text-muted-foreground">
+                 Assista aos tutoriais completos e descubra como dominar o seu calendário.
+               </p>
+               <a 
+                 href="https://youtube.com/playlist?list=GENERIC_LINK" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90"
+               >
+                 assistir vídeos tutoriais no YouTube
+                 <ExternalLink size={16} strokeWidth={2} aria-hidden="true" />
+               </a>
+            </div>
+          ) : selected === "terms" ? (
+            <div className="space-y-4">
+               <p className="text-sm leading-relaxed text-muted-foreground">
+                 Leia os nossos Termos de Uso oficiais para entender as condições de serviço da plataforma.
+               </p>
+               <a 
+                 href="https://seusite.com/termos-de-uso" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-input bg-background text-sm font-semibold text-foreground hover:bg-accent"
+               >
+                 ler Termos de Uso
+                 <ExternalLink size={16} strokeWidth={2} aria-hidden="true" />
+               </a>
+            </div>
+          ) : selected === "privacy" ? (
+             <div className="space-y-4">
+               <p className="text-sm leading-relaxed text-muted-foreground">
+                 Acesse a nossa Política de Privacidade para saber como protegemos e gerenciamos os seus dados.
+               </p>
+               <a 
+                 href="https://seusite.com/politica-de-privacidade" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-input bg-background text-sm font-semibold text-foreground hover:bg-accent"
+               >
+                 ler Política de Privacidade
+                 <ExternalLink size={16} strokeWidth={2} aria-hidden="true" />
+               </a>
+            </div>
+          ) : null}
         </AddWindow>
       )}
       <SigningOut show={signingOut} />
