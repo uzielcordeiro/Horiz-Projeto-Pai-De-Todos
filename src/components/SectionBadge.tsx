@@ -5,7 +5,7 @@ export const SECTION_KINDS: SectionKind[] = ["entradas", "saidas", "diarios", "e
 const sections: Record<SectionKind, { title: string; letter: string; tone: string }> = {
   entradas: { title: "entradas", letter: "E", tone: "bg-positive text-positive-foreground" },
   saidas: { title: "saídas", letter: "S", tone: "bg-negative text-negative-foreground" },
-  diarios: { title: "diários", letter: "D", tone: "bg-chart-4 text-primary-foreground" },
+  diarios: { title: "Dia/Dia", letter: "D", tone: "bg-chart-4 text-primary-foreground" },
   economias: { title: "poupança", letter: "P", tone: "bg-category-savings text-category-savings-foreground" },
   cartao: { title: "cartão", letter: "C", tone: "bg-chart-1 text-primary-foreground" },
 };
