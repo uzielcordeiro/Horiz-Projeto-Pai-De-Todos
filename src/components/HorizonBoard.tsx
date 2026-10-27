@@ -153,6 +153,33 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
 
+  // Trava scroll diagonal no desktop/trackpad: força apenas um eixo por gesto
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      const absX = Math.abs(e.deltaX);
+      const absY = Math.abs(e.deltaY);
+
+      // Se ambos os eixos tiverem movimento diagonal simultâneo significativo, isola o predominante
+      if (absX > 0 && absY > 0) {
+        if (absX > absY) {
+          el.scrollLeft += e.deltaX;
+          e.preventDefault();
+        } else {
+          el.scrollTop += e.deltaY;
+          e.preventDefault();
+        }
+      }
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
   // Desenha apenas as colunas na área visível (mais uma folga).
   useEffect(() => {
     const el = scrollerRef.current;
@@ -221,9 +248,8 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
       <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border">
         <div
           ref={scrollerRef}
-          className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl"
+          className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain overscroll-y-contain rounded-2xl"
           style={{
-            touchAction: "pan-x pan-y",
             WebkitOverflowScrolling: "touch",
           }}
         >
