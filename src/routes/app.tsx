@@ -94,7 +94,7 @@ const FORECAST_ID = "forecast-auto";
 const KINDS: { key: Kind; title: string; sign: 1 | -1 | 0 }[] = [
   { key: "entradas", title: "entradas", sign: 1 },
   { key: "saidas", title: "saídas", sign: -1 },
-  { key: "diarios", title: "diários", sign: -1 },
+  { key: "diarios", title: "Dia/Dia", sign: -1 },
   // economias é independente: não entra no saldo (sign 0)
   { key: "economias", title: "poupança", sign: 0 },
   { key: "cartao", title: "cartão", sign: -1 },
@@ -1899,7 +1899,7 @@ function IndexForUser({ userId }: { userId: string }) {
                     ? "editar"
                     : windowMode === "info"
                       ? (KINDS.find((item) => item.key === windowKind)?.title ??
-                          (windowKind === "saldos" ? "saldos" : "diários"))
+                          (windowKind === "saldos" ? "saldos" : "Dia/Dia"))
                       : "detalhes"
             }
             subtitle={
@@ -2044,11 +2044,44 @@ function IndexForUser({ userId }: { userId: string }) {
                   ) : (
                     <>
                       o{" "}
-                      <span className="font-bold tracking-wide text-primary">Diário</span>
+                      <span className="font-bold tracking-wide text-primary">Dia/Dia</span>
                     </>
                   )}
                   .
                 </p>
+
+                {windowKind === "diarios" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeWindow();
+                      setView("diario");
+                    }}
+                    className="mt-4 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+                  >
+                    ir para o Dia/Dia
+                    <span aria-hidden>›</span>
+                  </button>
+                )}
+
+                {windowKind === "economias" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (activeItem?.horizonTransfer) {
+                        jumpToHorizon(activeItem);
+                      } else {
+                        closeWindow();
+                        setView("horizonte");
+                      }
+                    }}
+                    className="mt-4 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+                  >
+                    ir para a Projeção
+                    <span aria-hidden>›</span>
+                  </button>
+                )}
+
                 {windowKind === "diarios" && (() => {
                   const fr = recurrences.find((r) => r.id === FORECAST_ID);
                   if (!fr) return null;
@@ -2168,17 +2201,6 @@ function IndexForUser({ userId }: { userId: string }) {
                     </div>
                   );
                 })()}
-                {windowKind === "economias" && activeItem?.horizonTransfer && (
-                  <button
-                    type="button"
-                    onClick={() => jumpToHorizon(activeItem)}
-                    aria-label="Ir para a seção da Projeção"
-                    className="mt-3 inline-flex h-8 items-center gap-1 rounded-lg border border-primary/40 bg-primary/15 px-3 text-sm font-semibold text-primary"
-                  >
-                    ir para a seção da Projeção
-                    <span aria-hidden>›</span>
-                  </button>
-                )}
               </div>
             )}
 
