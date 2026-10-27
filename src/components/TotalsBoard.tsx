@@ -36,7 +36,7 @@ const badge: Record<Kind, string> = {
 const LIST: { key: Kind; title: string; letter: string }[] = [
   { key: "entradas", title: "entradas", letter: "E" },
   { key: "saidas", title: "saídas", letter: "S" },
-  { key: "diarios", title: "diários", letter: "D" },
+  { key: "diarios", title: "Dia/Dia", letter: "D" },
   { key: "economias", title: "poupança", letter: "P" },
   { key: "cartao", title: "gastos com cartão", letter: "C" },
 ];
@@ -149,7 +149,7 @@ export function TotalsBoard({
             hint={custoVida === 0 ? "zerado" : "somatório dos gastos do mês"}
           />
           <Card
-            title="gasto diário"
+            title="gasto dia/dia"
             formula={
               <>
                 <Dot k="diarios" />
@@ -157,7 +157,7 @@ export function TotalsBoard({
               </>
             }
             value={<FitMoney value={diarioMedio} threshold={1000000} />}
-            hint={`diários lançados: ${brl(totals.diarios)}`}
+            hint={`dia/dia lançados: ${brl(totals.diarios)}`}
           />
         </div>
       </div>
@@ -187,11 +187,11 @@ export function TotalsBoard({
       </div>
 
       <div>
-        <p className="mb-3 text-sm text-muted-foreground">previsão de diários do mês</p>
+        <p className="mb-3 text-sm text-muted-foreground">previsão de dia/dia do mês</p>
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-4">
           <Dot k="diarios" />
           <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
-            previsão de diário{" "}
+            previsão de dia/dia{" "}
             <span className="text-muted-foreground">× {daysInMonth} dias</span>
           </span>
           <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
