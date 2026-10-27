@@ -1477,7 +1477,7 @@ function IndexForUser({ userId }: { userId: string }) {
                   : view === "saldos"
                   ? "Calendário"
                   : view === "horizonte"
-                  ? "Futuro"
+                  ? "Projeção"
                   : view === "totais"
                   ? "Resumo"
                   : view === "tags"
@@ -2038,8 +2038,8 @@ function IndexForUser({ userId }: { userId: string }) {
                     <span className="font-bold tracking-wide text-primary">as outras colunas</span>
                   ) : windowKind === "economias" ? (
                     <>
-                      a aba lateral do{" "}
-                      <span className="font-bold tracking-wide text-primary">Futuro</span>
+                      a aba lateral da{" "}
+                      <span className="font-bold tracking-wide text-primary">Projeção</span>
                     </>
                   ) : (
                     <>
@@ -2172,10 +2172,10 @@ function IndexForUser({ userId }: { userId: string }) {
                   <button
                     type="button"
                     onClick={() => jumpToHorizon(activeItem)}
-                    aria-label="Ir para a seção do Futuro"
+                    aria-label="Ir para a seção da Projeção"
                     className="mt-3 inline-flex h-8 items-center gap-1 rounded-lg border border-primary/40 bg-primary/15 px-3 text-sm font-semibold text-primary"
                   >
-                    ir para a seção do Futuro
+                    ir para a seção da Projeção
                     <span aria-hidden>›</span>
                   </button>
                 )}
@@ -2199,21 +2199,21 @@ function IndexForUser({ userId }: { userId: string }) {
                     <button
                       type="button"
                       onClick={() => jumpToHorizon(activeItem)}
-                      aria-label="Ir para a seção do Futuro"
+                      aria-label="Ir para a seção da Projeção"
                       className="block w-full rounded-2xl border border-primary/30 bg-card p-4 text-left transition-colors"
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="text-xs font-medium text-muted-foreground">origem</span>
                         <span className="inline-flex h-8 items-center gap-1 rounded-lg border border-primary/40 bg-primary/15 px-3 text-sm font-semibold text-primary">
-                          ir para a seção do Futuro
+                          ir para a seção da Projeção
                           <span aria-hidden>›</span>
                         </span>
                       </span>
                       <span className="mt-1 block text-sm font-semibold text-foreground">
-                        {`Poupado do Futuro em ${longDate(activeItem.date)}`}
+                        {`Poupado da Projeção em ${longDate(activeItem.date)}`}
                       </span>
                       <span className="mt-2 block text-xs leading-relaxed text-muted-foreground">
-                        Para adicionar ou retirar novos valores, use a aba lateral do Futuro.
+                        Para adicionar ou retirar novos valores, use a aba lateral da Projeção.
                       </span>
                     </button>
                   ) : (
@@ -2223,7 +2223,7 @@ function IndexForUser({ userId }: { userId: string }) {
                       {`Lançado em ${longDate(activeItem.date)}`}
                     </p>
                     <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                      Para adicionar ou retirar novos valores, use a aba lateral do Futuro.
+                      Para adicionar ou retirar novos valores, use a aba lateral da Projeção.
                     </p>
                   </div>
                   )
