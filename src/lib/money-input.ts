@@ -1,15 +1,28 @@
 /**
  * Formata o que é digitado num campo de valor no padrão brasileiro:
  * ponto separa milhares, vírgula separa centavos (máx. 2 casas).
- * Ex.: "50000" -> "50.000", "50000,5" -> "50.000,5".
+ * Permite digitação contínua empurrando a vírgula quando passa de 2 casas decimais.
  */
 export function formatMoneyInput(raw: string): string {
-  const clean = raw.replace(/[^\d,]/g, "");
+  let clean = raw.replace(/[^\d,]/g, "");
+
+  // Regra de "transbordo": se a casa decimal passar de 2 dígitos, empurra a vírgula para a direita.
   const commaIdx = clean.indexOf(",");
-  const intRaw = commaIdx === -1 ? clean : clean.slice(0, commaIdx);
-  const decRaw = commaIdx === -1 ? null : clean.slice(commaIdx + 1).replace(/,/g, "").slice(0, 2);
+  if (commaIdx !== -1) {
+    const afterComma = clean.slice(commaIdx + 1).replace(/,/g, "");
+    if (afterComma.length > 2) {
+      const onlyNumbers = clean.replace(/,/g, "");
+      // Reposiciona a vírgula para garantir que fiquem sempre 2 casas no final
+      clean = onlyNumbers.slice(0, -2) + "," + onlyNumbers.slice(-2);
+    }
+  }
+
+  const newCommaIdx = clean.indexOf(",");
+  const intRaw = newCommaIdx === -1 ? clean : clean.slice(0, newCommaIdx);
+  const decRaw = newCommaIdx === -1 ? null : clean.slice(newCommaIdx + 1).replace(/,/g, "").slice(0, 2);
   const intDigits = intRaw.replace(/^0+(?=\d)/, "");
   const intFmt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  
   if (decRaw === null) return intFmt;
   return `${intFmt || "0"},${decRaw}`;
 }
