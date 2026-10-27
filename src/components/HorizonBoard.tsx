@@ -136,11 +136,8 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
   );
 });
 
-/** Largura fixa de cada coluna (w-40) — base para desenhar só as colunas visíveis. */
 const COLUMN_WIDTH = 160;
-/** Colunas extras desenhadas além da área visível, para a rolagem não mostrar buracos. */
 const OVERSCAN = 3;
-/** Colunas desenhadas no primeiro quadro, antes de medir a tela (cobre telas largas). */
 const INITIAL_COLUMNS = 12;
 
 export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highlightDate }: Props) {
@@ -148,39 +145,96 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
   const [range, setRange] = useState({ from: 0, to: INITIAL_COLUMNS });
   const nav =
     "grid size-9 shrink-0 place-items-center rounded-full border-2 border-foreground text-foreground transition-colors hover:bg-accent";
-  /** verde-escuro enquanto aperta a seta de mês, vermelho enquanto aperta a seta de ano */
   const navMonth = `${nav} active:bg-surplus`;
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
 
-  // Trava scroll diagonal no desktop/trackpad: força apenas um eixo por gesto
+  // 1. Efeito Definitivo: Trava Dinâmica de Eixo (Desktop e Mobile)
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
 
-    const handleWheel = (e: WheelEvent) => {
-      const absX = Math.abs(e.deltaX);
-      const absY = Math.abs(e.deltaY);
+    let lockTimeout: NodeJS.Timeout | null = null;
+    let activeAxis: "x" | "y" | null = null;
 
-      // Se ambos os eixos tiverem movimento diagonal simultâneo significativo, isola o predominante
-      if (absX > 0 && absY > 0) {
-        if (absX > absY) {
-          el.scrollLeft += e.deltaX;
-          e.preventDefault();
-        } else {
-          el.scrollTop += e.deltaY;
-          e.preventDefault();
-        }
+    const lockAxis = (axis: "x" | "y") => {
+      if (activeAxis) return; // Se já travou no gesto atual, ignora
+      activeAxis = axis;
+      
+      // Força física no CSS em tempo real (sobrepõe a aceleração de hardware)
+      if (axis === "x") {
+        el.style.overflowY = "hidden";
+        el.style.overflowX = "auto";
+      } else {
+        el.style.overflowX = "hidden";
+        el.style.overflowY = "auto";
       }
     };
 
-    el.addEventListener("wheel", handleWheel, { passive: false });
+    const unlockAxis = () => {
+      activeAxis = null;
+      el.style.overflowX = "auto";
+      el.style.overflowY = "auto";
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!activeAxis) {
+        const absX = Math.abs(e.deltaX);
+        const absY = Math.abs(e.deltaY);
+        // Detecta a intenção principal e aplica a trava instantaneamente
+        if (absX > 2 || absY > 2) {
+          lockAxis(absX > absY ? "x" : "y");
+        }
+      }
+      // Renova o timer da inércia
+      if (lockTimeout) clearTimeout(lockTimeout);
+      lockTimeout = setTimeout(unlockAxis, 150);
+    };
+
+    let startX = 0;
+    let startY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!activeAxis && e.touches.length === 1) {
+        const dx = Math.abs(e.touches[0].clientX - startX);
+        const dy = Math.abs(e.touches[0].clientY - startY);
+        if (dx > 5 || dy > 5) {
+          lockAxis(dx > dy ? "x" : "y");
+        }
+      }
+      if (lockTimeout) clearTimeout(lockTimeout);
+      lockTimeout = setTimeout(unlockAxis, 150);
+    };
+
+    const handleScroll = () => {
+      if (activeAxis) {
+        if (lockTimeout) clearTimeout(lockTimeout);
+        lockTimeout = setTimeout(unlockAxis, 150);
+      }
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: true });
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchmove", handleTouchMove, { passive: true });
+    el.addEventListener("scroll", handleScroll, { passive: true });
+
     return () => {
       el.removeEventListener("wheel", handleWheel);
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchmove", handleTouchMove);
+      el.removeEventListener("scroll", handleScroll);
+      if (lockTimeout) clearTimeout(lockTimeout);
     };
   }, []);
 
-  // Desenha apenas as colunas na área visível (mais uma folga).
+  // 2. Efeito Original: Observador de Área Visível (Renderização sob demanda)
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -248,7 +302,7 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
       <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border">
         <div
           ref={scrollerRef}
-          className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain overscroll-y-contain rounded-2xl"
+          className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl"
           style={{
             WebkitOverflowScrolling: "touch",
           }}
