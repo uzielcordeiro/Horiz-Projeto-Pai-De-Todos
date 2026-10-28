@@ -122,7 +122,7 @@ const longDate = (isoDate: string) =>
 
 type Status = "positive" | "warning" | "negative";
 const statusOf = (b: number): Status => (b >= 1000 ? "positive" : b >= 0 ? "warning" : "negative");
-/** no Futuro, R$ 1.000 negativo ou mais ganha o vermelho mais intenso (--negative-deep) */
+/** no Futuro, R$ 1.000 negativo ou mais ganha o vermelho mais intense (--negative-deep) */
 const horizonStatusOf = (b: number): HorizonDay["status"] =>
   b <= -1000 ? "negativeDeep" : b >= 2000 ? "surplus" : statusOf(b);
 
@@ -384,7 +384,7 @@ function IndexForUser({ userId }: { userId: string }) {
       if (subRes.data) {
         setSubscriptionStatus(subRes.data.status);
       } else {
-        setSubscriptionStatus("inactive");
+        setSubscriptionStatus("none");
       }
 
       if (txRes.data) {
@@ -1418,6 +1418,39 @@ function IndexForUser({ userId }: { userId: string }) {
   const isSaldos = view === "saldos" && !adding;
 
   if (!loaded) return <LoadingScreen />;
+
+  if (subscriptionStatus === "none") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-full bg-primary/10">
+            <span aria-hidden className="font-display text-2xl font-bold text-primary">H</span>
+          </div>
+          <h1 className="mb-3 font-display text-2xl font-semibold text-foreground">Você ainda não é assinante</h1>
+          <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+            Escolha o plano ideal para a sua jornada e tenha acesso completo ao painel de saldos e calendário do Horiz.
+          </p>
+          <div className="space-y-3">
+            <Button
+              onClick={() => {
+                window.location.href = "https://horizapp.com";
+              }}
+              className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Escolher Plano
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => supabase.auth.signOut()}
+              className="h-12 w-full rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              Sair da conta
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (subscriptionStatus !== "active" && subscriptionStatus !== "trialing") {
     return (
