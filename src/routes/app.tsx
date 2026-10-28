@@ -288,7 +288,6 @@ function IndexForUser({ userId }: { userId: string }) {
   const [loaded, setLoaded] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   
-  // CORREÇÃO: Memoriza o mês no localStorage
   const [cursor, setCursor] = useState(() => {
     if (typeof window !== "undefined") {
       const savedY = localStorage.getItem("horiz_cursor_y");
@@ -315,7 +314,6 @@ function IndexForUser({ userId }: { userId: string }) {
   const [forecastRestoring, setForecastRestoring] = useState(false);
   const [forecastShake, setForecastShake] = useState(0);
 
-  // CORREÇÃO: Memoriza a aba (view) no localStorage
   const [view, setView] = useState<"perfil" | "saldos" | "horizonte" | "totais" | "tags" | "menu" | "diario">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("horiz_active_view");
@@ -369,7 +367,6 @@ function IndexForUser({ userId }: { userId: string }) {
   } | null>(null);
   const [horizonHighlight, setHorizonHighlight] = useState<string | null>(null);
 
-  // Carregar dados diretamente do Supabase na inicialização, incluindo status da assinatura
   useLayoutEffect(() => {
     let cancelled = false;
     async function loadFromSupabase() {
@@ -478,11 +475,15 @@ function IndexForUser({ userId }: { userId: string }) {
 
     if (!userId) return;
 
-    // Sincronizar transactions (lançamentos únicos)
+    // Sincronizar transactions (lançamentos únicos) - DIFF LOGIC
     const currentTxIds = new Set(nextEntries.map((e) => e.id));
     const txToRemove = entries.filter((e) => !currentTxIds.has(e.id)).map(e => e.id);
     
-    const txUpserts = nextEntries.map((e) => {
+    const txUpserts = nextEntries.filter(e => {
+      const old = entries.find(o => o.id === e.id);
+      if (!old) return true; // novo item
+      return old.amount !== e.amount || old.label !== e.label || old.date !== e.date || old.kind !== e.kind || JSON.stringify(old.tags) !== JSON.stringify(e.tags) || old.horizonTransfer !== e.horizonTransfer;
+    }).map((e) => {
       const finalTags = e.tags ? [...e.tags] : [];
       if (e.horizonTransfer && !finalTags.includes("horizon_transfer")) finalTags.push("horizon_transfer");
       return {
@@ -496,7 +497,6 @@ function IndexForUser({ userId }: { userId: string }) {
       };
     });
 
-    // CORREÇÃO: Usando await para garantir a persistência
     if (txToRemove.length > 0) {
       const { error } = await supabase.from("transactions").delete().eq("user_id", userId).in("id", txToRemove);
       if (error) console.error("Erro ao deletar transações:", error);
@@ -506,11 +506,15 @@ function IndexForUser({ userId }: { userId: string }) {
       if (error) console.error("Erro ao upsert transações:", error);
     }
 
-    // Sincronizar recurrences (recorrências e parcelamentos)
+    // Sincronizar recurrences (recorrências e parcelamentos) - DIFF LOGIC
     const currentRecIds = new Set(nextRecurrences.map((r) => r.id));
     const recToRemove = recurrences.filter((r) => !currentRecIds.has(r.id)).map(r => r.id);
     
-    const recUpserts = nextRecurrences.map((r) => ({
+    const recUpserts = nextRecurrences.filter(r => {
+      const old = recurrences.find(o => o.id === r.id);
+      if (!old) return true;
+      return JSON.stringify(old) !== JSON.stringify(r);
+    }).map((r) => ({
       id: r.id,
       user_id: userId,
       payload: r as unknown as object,
@@ -525,12 +529,16 @@ function IndexForUser({ userId }: { userId: string }) {
       if (error) console.error("Erro ao upsert recorrências:", error);
     }
     
-    // Sincronizar forecasts se passado no parâmetro
+    // Sincronizar forecasts se passado no parâmetro - DIFF LOGIC
     if (customForecasts) {
        const currentCastIds = new Set(customForecasts.map((c) => c.id));
        const castToRemove = forecastItems.filter((c) => !currentCastIds.has(c.id)).map(c => c.id);
        
-       const castUpserts = customForecasts.map((c) => ({
+       const castUpserts = customForecasts.filter(c => {
+         const old = forecastItems.find(o => o.id === c.id);
+         if (!old) return true;
+         return JSON.stringify(old) !== JSON.stringify(c);
+       }).map((c) => ({
          id: c.id,
          user_id: userId,
          payload: c as unknown as object,
