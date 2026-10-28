@@ -227,17 +227,17 @@ export function LoginPage() {
         
         {mode === "forgot" ? (
           <div className="mb-6 space-y-1 text-center">
-            <h2 className="font-medium text-foreground">Esqueci minha senha</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">Esqueci minha senha</h2>
             <p className="text-sm text-muted-foreground">Informe seu e-mail para receber o link de redefinição.</p>
           </div>
+        ) : mode === "up" ? (
+          <div className="mb-6 space-y-1 text-center">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">Finalize seu cadastro</h2>
+          </div>
         ) : (
-          <Button 
-            type="button" 
-            tabIndex={-1} 
-            className="mb-6 w-full pointer-events-none cursor-default"
-          >
-            {mode === "in" ? "Login" : "Cadastrar"}
-          </Button>
+          <div className="mb-6 space-y-1 text-center">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">Acesse sua conta</h2>
+          </div>
         )}
 
         <form onSubmit={submit} className="space-y-4">
