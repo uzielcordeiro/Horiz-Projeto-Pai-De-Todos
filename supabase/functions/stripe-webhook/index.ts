@@ -37,14 +37,31 @@ serve(async (req) => {
 
     console.log(`Evento recebido do Stripe: ${event.type}`)
 
+    // Ignora silenciosamente eventos que não sejam a conclusão do checkout,
+    // retornando 200 OK para evitar que a Stripe registre falhas (erro 400)
+    if (event.type !== "checkout.session.completed") {
+      return new Response(JSON.stringify({ received: true, ignored: true }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      })
+    }
+
     // Processa a conclusão do checkout/pagamento
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session
 
-      // Inicializa o Supabase Admin usando a Service Role para ignorar regras de RLS na atualização
+      // Inicializa o Supabase Admin usando a Service Role
+      // As opções de auth desligam as sessões em segundo plano, o que elimina o erro "Deno.core.runMicrotasks()"
       const supabaseAdmin = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        }
       )
 
       const customerEmail = session.customer_details?.email
