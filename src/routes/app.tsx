@@ -1419,7 +1419,7 @@ function IndexForUser({ userId }: { userId: string }) {
 
   if (!loaded) return <LoadingScreen />;
 
-  if (subscriptionStatus === "none") {
+  if (subscriptionStatus === "none" || subscriptionStatus === null || subscriptionStatus === "inactive") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
