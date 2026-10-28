@@ -218,25 +218,28 @@ export function LoginPage() {
   }
 
   const input = "h-11 w-full rounded-lg border border-input bg-background px-3 text-foreground outline-none focus:border-primary";
-  const tab = (active: boolean) =>
-    `flex-1 rounded-md py-2 text-sm font-semibold transition-colors ${active ? "bg-primary text-primary-foreground shadow-sm" : "bg-transparent text-muted-foreground hover:bg-input/80 hover:text-foreground"}`;
   const link = "text-sm text-primary underline-offset-4 hover:underline";
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6">
         <h1 className="mb-6 text-center font-display text-2xl font-semibold text-foreground">HORIZ</h1>
-        {mode !== "forgot" ? (
-          <div role="tablist" className="mb-6 flex gap-1 rounded-lg bg-input/50 p-1">
-            <button role="tab" type="button" aria-selected={mode === "in"} className={tab(mode === "in")} onClick={() => switchMode("in")}>Entrar</button>
-            <button role="tab" type="button" aria-selected={mode === "up"} className={tab(mode === "up")} onClick={() => switchMode("up")}>Cadastrar</button>
-          </div>
-        ) : (
+        
+        {mode === "forgot" ? (
           <div className="mb-6 space-y-1 text-center">
             <h2 className="font-medium text-foreground">Esqueci minha senha</h2>
             <p className="text-sm text-muted-foreground">Informe seu e-mail para receber o link de redefinição.</p>
           </div>
+        ) : (
+          <Button 
+            type="button" 
+            tabIndex={-1} 
+            className="mb-6 w-full pointer-events-none cursor-default"
+          >
+            {mode === "in" ? "Login" : "Cadastrar"}
+          </Button>
         )}
+
         <form onSubmit={submit} className="space-y-4">
           {mode === "up" && (<>
             <label className="block space-y-2 text-sm text-muted-foreground">
