@@ -140,13 +140,10 @@ export function ProfileBoard() {
                  Leia os nossos Termos de Uso oficiais para entender as condições de serviço da plataforma.
                </p>
                <a 
-                 href="https://seusite.com/termos-de-uso" 
-                 target="_blank" 
-                 rel="noopener noreferrer"
-                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-input bg-background text-sm font-semibold text-foreground hover:bg-accent"
+                 href="/termos" 
+                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90"
                >
                  ler Termos de Uso
-                 <ExternalLink size={16} strokeWidth={2} aria-hidden="true" />
                </a>
             </div>
           ) : selected === "privacy" ? (
@@ -155,13 +152,10 @@ export function ProfileBoard() {
                  Acesse a nossa Política de Privacidade para saber como protegemos e gerenciamos os seus dados.
                </p>
                <a 
-                 href="https://seusite.com/politica-de-privacidade" 
-                 target="_blank" 
-                 rel="noopener noreferrer"
-                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-input bg-background text-sm font-semibold text-foreground hover:bg-accent"
+                 href="/privacidade" 
+                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90"
                >
                  ler Política de Privacidade
-                 <ExternalLink size={16} strokeWidth={2} aria-hidden="true" />
                </a>
             </div>
           ) : null}
