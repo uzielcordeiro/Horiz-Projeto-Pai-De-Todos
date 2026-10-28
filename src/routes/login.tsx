@@ -48,6 +48,7 @@ export function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [fullName, setFullName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -151,6 +152,12 @@ export function LoginPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    
+    if (mode === "up" && !termsAccepted) {
+      setMsg({ ok: false, text: "Você precisa declarar ser maior de 18 anos e aceitar os Termos e Políticas para prosseguir." });
+      return;
+    }
+
     setBusy(true);
     setMsg(null);
 
@@ -256,6 +263,7 @@ export function LoginPage() {
               </div>
             </label>
           )}
+          
           {mode === "in" && (
             <div className="flex items-center justify-between gap-2">
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -272,13 +280,34 @@ export function LoginPage() {
               <button type="button" className={link} onClick={() => switchMode("forgot")}>Esqueci minha senha</button>
             </div>
           )}
+
+          {mode === "up" && (
+            <label className="flex items-start gap-2.5 text-sm text-muted-foreground mt-2">
+              <input 
+                type="checkbox" 
+                required 
+                checked={termsAccepted} 
+                onChange={(e) => {
+                  setTermsAccepted(e.target.checked);
+                  if (msg) setMsg(null);
+                }} 
+                className="mt-1 size-4 shrink-0 accent-primary" 
+              />
+              <span className="leading-snug">
+                Declaro ser maior de 18 anos e li e concordo com os{" "}
+                <a href="/termos" target="_blank" rel="noopener noreferrer" className={link}>Termos de Uso</a> e a{" "}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className={link}>Política de Privacidade</a> do HORIZ.
+              </span>
+            </label>
+          )}
+
           {msg && (
             <div className={`rounded-lg border p-3 text-sm ${msg.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
               {msg.text}
             </div>
           )}
           {!supabaseConfigured && <p className="text-sm text-destructive">Conexão com o Supabase ainda não configurada.</p>}
-          <Button type="submit" className="w-full" disabled={busy}>
+          <Button type="submit" className="w-full" disabled={busy || (mode === "up" && !termsAccepted)}>
             {mode === "in" ? "entrar" : mode === "up" ? "cadastrar" : "enviar link"}
           </Button>
           {mode === "forgot" && (
