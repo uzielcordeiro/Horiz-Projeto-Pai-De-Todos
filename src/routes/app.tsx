@@ -287,7 +287,24 @@ function IndexForUser({ userId }: { userId: string }) {
   const [recurrences, setRecurrences] = useState<Recurrence[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
-  const [cursor, setCursor] = useState({ y: today.getFullYear(), m: today.getMonth() });
+  
+  // CORREÇÃO: Memoriza o mês no localStorage
+  const [cursor, setCursor] = useState(() => {
+    if (typeof window !== "undefined") {
+      const savedY = localStorage.getItem("horiz_cursor_y");
+      const savedM = localStorage.getItem("horiz_cursor_m");
+      if (savedY && savedM) return { y: Number(savedY), m: Number(savedM) };
+    }
+    return { y: today.getFullYear(), m: today.getMonth() };
+  });
+  
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("horiz_cursor_y", String(cursor.y));
+      localStorage.setItem("horiz_cursor_m", String(cursor.m));
+    }
+  }, [cursor]);
+
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
   const [windowMode, setWindowMode] = useState<"add" | "month" | "list" | "detail" | "edit" | "info" | "horizon" | "pick">("add");
@@ -297,7 +314,22 @@ function IndexForUser({ userId }: { userId: string }) {
   const [forecastConfirm, setForecastConfirm] = useState(false);
   const [forecastRestoring, setForecastRestoring] = useState(false);
   const [forecastShake, setForecastShake] = useState(0);
-  const [view, setView] = useState<"perfil" | "saldos" | "horizonte" | "totais" | "tags" | "menu" | "diario">("saldos");
+
+  // CORREÇÃO: Memoriza a aba (view) no localStorage
+  const [view, setView] = useState<"perfil" | "saldos" | "horizonte" | "totais" | "tags" | "menu" | "diario">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("horiz_active_view");
+      if (saved) return saved as any;
+    }
+    return "saldos";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("horiz_active_view", view);
+    }
+  }, [view]);
+
   const [horizonStart, setHorizonStart] = useState({ y: today.getFullYear(), m: today.getMonth() });
   const canGoBack = cursor.y * 12 + cursor.m > today.getFullYear() * 12 + today.getMonth();
   const calendarSwipeRef = useCalendarSwipe(shiftMonth, canGoBack, loaded && view === "saldos" && !adding);
@@ -464,15 +496,14 @@ function IndexForUser({ userId }: { userId: string }) {
       };
     });
 
+    // CORREÇÃO: Usando await para garantir a persistência
     if (txToRemove.length > 0) {
-      supabase.from("transactions").delete().eq("user_id", userId).in("id", txToRemove).then(({ error }) => {
-         if (error) console.error("Erro ao deletar transações:", error);
-      });
+      const { error } = await supabase.from("transactions").delete().eq("user_id", userId).in("id", txToRemove);
+      if (error) console.error("Erro ao deletar transações:", error);
     }
     if (txUpserts.length > 0) {
-      supabase.from("transactions").upsert(txUpserts).then(({ error }) => {
-         if (error) console.error("Erro ao upsert transações:", error);
-      });
+      const { error } = await supabase.from("transactions").upsert(txUpserts);
+      if (error) console.error("Erro ao upsert transações:", error);
     }
 
     // Sincronizar recurrences (recorrências e parcelamentos)
@@ -486,14 +517,12 @@ function IndexForUser({ userId }: { userId: string }) {
     }));
 
     if (recToRemove.length > 0) {
-      supabase.from("recurrences").delete().eq("user_id", userId).in("id", recToRemove).then(({ error }) => {
-         if (error) console.error("Erro ao deletar recorrências:", error);
-      });
+      const { error } = await supabase.from("recurrences").delete().eq("user_id", userId).in("id", recToRemove);
+      if (error) console.error("Erro ao deletar recorrências:", error);
     }
     if (recUpserts.length > 0) {
-      supabase.from("recurrences").upsert(recUpserts).then(({ error }) => {
-         if (error) console.error("Erro ao upsert recorrências:", error);
-      });
+      const { error } = await supabase.from("recurrences").upsert(recUpserts);
+      if (error) console.error("Erro ao upsert recorrências:", error);
     }
     
     // Sincronizar forecasts se passado no parâmetro
@@ -508,14 +537,12 @@ function IndexForUser({ userId }: { userId: string }) {
        }));
 
        if (castToRemove.length > 0) {
-         supabase.from("forecasts").delete().eq("user_id", userId).in("id", castToRemove).then(({ error }) => {
-            if (error) console.error("Erro ao deletar previsões:", error);
-         });
+         const { error } = await supabase.from("forecasts").delete().eq("user_id", userId).in("id", castToRemove);
+         if (error) console.error("Erro ao deletar previsões:", error);
        }
        if (castUpserts.length > 0) {
-         supabase.from("forecasts").upsert(castUpserts).then(({ error }) => {
-            if (error) console.error("Erro ao upsert previsões:", error);
-         });
+         const { error } = await supabase.from("forecasts").upsert(castUpserts);
+         if (error) console.error("Erro ao upsert previsões:", error);
        }
     }
   }
