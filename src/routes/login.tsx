@@ -167,7 +167,14 @@ export function LoginPage() {
     if (mode === "forgot") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
       setBusy(false);
+      
       if (error) return setMsg({ ok: false, text: error.message });
+      
+      try {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+        localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
+      } catch { /* ignore */ }
+
       return setMsg({ ok: true, text: "Se o e-mail estiver cadastrado, você receberá um link para redefinição." });
     }
 
