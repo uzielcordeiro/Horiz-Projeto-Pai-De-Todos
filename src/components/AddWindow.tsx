@@ -113,10 +113,9 @@ export function AddWindow({
         aria-label={title}
         className="relative flex max-h-[85vh] w-[92vw] max-w-[360px] flex-col overflow-hidden rounded-3xl border border-border bg-secondary/70 shadow-2xl"
       >
-        {/* NOVO CABEÇALHO REESTRUTURADO */}
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
           
-          {/* Lado Esquerdo: Título com espaço livre */}
+          {/* Lado Esquerdo: Título com suporte a truncagem/abreviação */}
           <div className="min-w-0 flex-1 pt-0.5">
             <h2
               className={`truncate font-display text-foreground ${
@@ -134,7 +133,7 @@ export function AddWindow({
             )}
           </div>
 
-          {/* Lado Direito: Calendário, Botão Voltar (headerAction) e Botão Sair agrupados */}
+          {/* Lado Direito: Calendário, Ação (Voltar) e Botão Sair condicional agrupados na extremidade */}
           <div className="flex shrink-0 items-center gap-2">
             {dateHero && (
               <div className="w-11 shrink-0 overflow-hidden rounded-xl border border-border bg-card text-center shadow-sm">
