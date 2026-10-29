@@ -1916,7 +1916,7 @@ function IndexForUser({ userId }: { userId: string }) {
                   },
                 ]
             : undefined;
-          const horizonAddWindow =
+         const horizonAddWindow =
             windowMode === "horizon" ||
             windowMode === "pick" ||
             (windowMode === "add" &&
@@ -1924,8 +1924,13 @@ function IndexForUser({ userId }: { userId: string }) {
               windowKind === "entradas" ||
               windowKind === "saidas" ||
               windowKind === "cartao"));
+
+          const isMonthListKind = windowKind === "entradas" || windowKind === "saidas" || windowKind === "cartao";
+          const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMode === "edit") && windowDayItems.length > 0 && !cameFromPick;
+
           return (
           <AddWindow
+            hideClose={showBackBtn || ((windowMode === "add" || windowMode === "info") && cameFromPick)}
             headerAction={
               (windowMode === "add" || windowMode === "info") && cameFromPick ? (
                 <Button
@@ -1948,6 +1953,39 @@ function IndexForUser({ userId }: { userId: string }) {
                 >
                    <span className="w-4 shrink-0 text-center">＋</span>
                   <span>adicionar</span>
+                 </Button>
+              ) : (windowMode === "month" || windowMode === "list") && isMonthListKind ? (
+                 <Button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setError(null);
+                    setShowCal(false);
+                    setWindowMode("add");
+                  }}
+                  aria-label="adicionar"
+                  title="adicionar"
+                  className="h-9 shrink-0 gap-1 rounded-xl bg-positive px-2 text-xs font-semibold text-positive-foreground shadow hover:bg-positive/90"
+                 >
+                   <span className="w-4 shrink-0 text-center">＋</span>
+                   <span>adicionar</span>
+                 </Button>
+              ) : showBackBtn ? (
+                 <Button
+                  type="button"
+                  onClick={() => {
+                    if (windowMode === "edit" && activeItemKey) {
+                      setWindowMode("detail");
+                    } else {
+                      setWindowMode(isMonthListKind ? "month" : "list");
+                    }
+                  }}
+                  aria-label="voltar"
+                  title="voltar"
+                  className="h-9 shrink-0 gap-1 rounded-full bg-primary px-3 text-xs font-bold text-primary-foreground shadow hover:bg-primary/90"
+                 >
+                   <span aria-hidden className="w-4 shrink-0 text-center">‹</span>
+                   <span>voltar</span>
                  </Button>
               ) : undefined
             }
