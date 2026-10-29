@@ -18,6 +18,7 @@ type Props = {
   deleteDayDisabled?: boolean | undefined;
   deleteMonthDisabled?: boolean | undefined;
   onDeleteItem?: (() => void) | undefined;
+  hideClose?: boolean;
   children: ReactNode;
 };
 
@@ -33,6 +34,7 @@ export function AddWindow({
   deleteDayDisabled = false,
   deleteMonthDisabled = false,
   onDeleteItem,
+  hideClose = false,
   children,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -111,24 +113,29 @@ export function AddWindow({
         aria-label={title}
         className="relative flex max-h-[85vh] w-[92vw] max-w-[360px] flex-col overflow-hidden rounded-3xl border border-border bg-secondary/70 shadow-2xl"
       >
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 px-5 pt-5 pb-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <h2
-                className={`truncate font-display text-foreground ${
-                  dateHero ? "text-xl font-extrabold tracking-tight" : "text-2xl font-bold"
-                }`}
-              >
-                {title}
-              </h2>
-              {dateHero ? (
-                <p className="mt-0.5 truncate text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                  {dateHero.month} {dateHero.year}
-                </p>
-              ) : (
-                subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-              )}
-            </div>
+        {/* NOVO CABEÇALHO REESTRUTURADO */}
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+          
+          {/* Lado Esquerdo: Título com espaço livre */}
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h2
+              className={`truncate font-display text-foreground ${
+                dateHero ? "text-xl font-extrabold tracking-tight" : "text-2xl font-bold"
+              }`}
+            >
+              {title}
+            </h2>
+            {dateHero ? (
+              <p className="mt-0.5 truncate text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                {dateHero.month} {dateHero.year}
+              </p>
+            ) : (
+              subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+            )}
+          </div>
+
+          {/* Lado Direito: Calendário, Botão Voltar (headerAction) e Botão Sair agrupados */}
+          <div className="flex shrink-0 items-center gap-2">
             {dateHero && (
               <div className="w-11 shrink-0 overflow-hidden rounded-xl border border-border bg-card text-center shadow-sm">
                 <div className="bg-negative py-0.5 text-[9px] font-bold uppercase tracking-wide text-negative-foreground">
@@ -139,97 +146,102 @@ export function AddWindow({
                 </div>
               </div>
             )}
-          </div>
-          {headerAction}
-          {hasDelete && (
-            <div className="relative">
-              <button
-                ref={triggerRef}
-                type="button"
-                disabled={allDisabled}
-                aria-label={menuOpen ? "fechar opções de apagar" : "apagar"}
-                aria-expanded={menuOpen}
-                title={allDisabled ? "nada para apagar" : "apagar"}
-                onClick={() => {
-                  if (allDisabled) return;
-                  setMenuOpen((v) => !v);
-                  setConfirming(null);
-                }}
-                className={`flex h-9 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-bold uppercase tracking-wide transition-all ${
-                  allDisabled
-                    ? "cursor-not-allowed bg-muted text-muted-foreground/50"
-                    : menuOpen || confirming
-                      ? "bg-negative text-negative-foreground shadow-lg"
-                      : "bg-negative text-negative-foreground shadow hover:brightness-110"
-                }`}
-              >
-                apagar
-              </button>
-
-              {menuOpen && (
-                <div
-                  className="absolute right-0 top-full z-50 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl"
-                  role="menu"
+            
+            {headerAction}
+            
+            {hasDelete && (
+              <div className="relative">
+                <button
+                  ref={triggerRef}
+                  type="button"
+                  disabled={allDisabled}
+                  aria-label={menuOpen ? "fechar opções de apagar" : "apagar"}
+                  aria-expanded={menuOpen}
+                  title={allDisabled ? "nada para apagar" : "apagar"}
+                  onClick={() => {
+                    if (allDisabled) return;
+                    setMenuOpen((v) => !v);
+                    setConfirming(null);
+                  }}
+                  className={`flex h-9 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-bold uppercase tracking-wide transition-all ${
+                    allDisabled
+                      ? "cursor-not-allowed bg-muted text-muted-foreground/50"
+                      : menuOpen || confirming
+                        ? "bg-negative text-negative-foreground shadow-lg"
+                        : "bg-negative text-negative-foreground shadow hover:brightness-110"
+                  }`}
                 >
-                  {actions.map((action) => (
+                  apagar
+                </button>
+
+                {menuOpen && (
+                  <div
+                    className="absolute right-0 top-full z-50 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl"
+                    role="menu"
+                  >
+                    {actions.map((action) => (
+                      <DeleteOption
+                        key={action.key}
+                        label={confirming === action.key ? "confirmar" : action.label}
+                        disabled={action.disabled === true}
+                        confirming={confirming === action.key}
+                        tone={action.tone ?? "negative"}
+                        onSelect={() => {
+                          if (confirming === action.key) {
+                            setConfirming(null);
+                            setMenuOpen(false);
+                            action.onSelect();
+                            return;
+                          }
+                          setConfirming(action.key);
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {onDeleteItem ? (
+              <div ref={itemConfirmRef} className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setItemConfirm((v) => !v)}
+                  aria-expanded={itemConfirm}
+                  className="h-8 shrink-0 rounded-lg border border-negative/40 bg-negative/10 px-2.5 text-xs font-semibold text-negative transition-colors hover:bg-negative/20"
+                >
+                  apagar
+                </button>
+                {itemConfirm && (
+                  <div className="absolute right-0 top-full z-50 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl">
+                    <p className="px-3 pt-1 pb-1.5 text-xs font-medium text-muted-foreground">tem certeza?</p>
                     <DeleteOption
-                      key={action.key}
-                      label={confirming === action.key ? "confirmar" : action.label}
-                      disabled={action.disabled === true}
-                      confirming={confirming === action.key}
-                      tone={action.tone ?? "negative"}
+                      label="tenho certeza"
+                      disabled={false}
+                      confirming={false}
+                      tone="negative"
                       onSelect={() => {
-                        if (confirming === action.key) {
-                          setConfirming(null);
-                          setMenuOpen(false);
-                          action.onSelect();
-                          return;
-                        }
-                        setConfirming(action.key);
+                        setItemConfirm(false);
+                        onDeleteItem();
+                        onClose();
                       }}
                     />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {onDeleteItem ? (
-            <div ref={itemConfirmRef} className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setItemConfirm((v) => !v)}
-                aria-expanded={itemConfirm}
-                className="h-8 shrink-0 rounded-lg border border-negative/40 bg-negative/10 px-2.5 text-xs font-semibold text-negative transition-colors hover:bg-negative/20"
-              >
-                apagar
-              </button>
-              {itemConfirm && (
-                <div className="absolute right-0 top-full z-50 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl">
-                  <p className="px-3 pt-1 pb-1.5 text-xs font-medium text-muted-foreground">tem certeza?</p>
-                  <DeleteOption
-                    label="tenho certeza"
-                    disabled={false}
-                    confirming={false}
-                    tone="negative"
-                    onSelect={() => {
-                      setItemConfirm(false);
-                      onDeleteItem();
-                      onClose();
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Fechar"
-              className="grid size-9 shrink-0 place-items-center rounded-full text-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              ×
-            </button>
-          )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              !hideClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Sair"
+                  className="h-9 shrink-0 rounded-xl bg-positive px-3.5 text-xs font-bold uppercase tracking-wide text-positive-foreground shadow transition hover:bg-positive/90"
+                >
+                  Sair
+                </button>
+              )
+            )}
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5">{children}</div>
