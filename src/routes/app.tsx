@@ -653,6 +653,12 @@ function IndexForUser({ userId }: { userId: string }) {
 
     let opening = 0;
     const byDate = new Map<string, number>();
+
+    // PASSO 1: Preparar as listas de presença (Set) para busca instantânea de setas
+    const incomeDays = new Set<string>();
+    const expenseDays = new Set<string>();
+
+    // Mapeia os lançamentos únicos
     for (const e of sorted) {
       const sign = balanceSign(e.kind, e.horizonTransfer);
       if (e.date < first) {
@@ -661,18 +667,30 @@ function IndexForUser({ userId }: { userId: string }) {
         const k = KINDS.find((x) => x.key === e.kind);
         if (k) byDate.set(e.date, cents((byDate.get(e.date) ?? 0) + sign * e.amount));
       }
+      
+      // Etiqueta se o dia teve entrada ou saída para as setas visuais
+      if (e.kind === "entradas") incomeDays.add(e.date);
+      else if (e.kind !== "entradas" && e.kind !== "diarios") expenseDays.add(e.date);
     }
+
+    // Mapeia as ocorrências (repetições)
     for (const r of recurrences) {
       const k = KINDS.find((x) => x.key === r.kind);
       if (!k) continue;
+      
       const sign = balanceSign(r.kind as Kind, r.horizonTransfer);
       opening = cents(opening + sign * sumBefore(r, first));
+      
       for (const { y, m } of range) {
         for (const o of occurrencesInMonth(r, y, m)) {
           byDate.set(
             o.date,
             cents((byDate.get(o.date) ?? 0) + balanceSign(o.kind as Kind, o.horizonTransfer) * o.amount),
           );
+          
+          // Etiqueta se a repetição no dia gera entrada ou saída
+          if (o.kind === "entradas") incomeDays.add(o.date);
+          else if (o.kind !== "entradas" && o.kind !== "diarios") expenseDays.add(o.date);
         }
       }
     }
@@ -680,37 +698,18 @@ function IndexForUser({ userId }: { userId: string }) {
     const out: HorizonMonth[] = [];
     let running = opening;
 
-    // OTIMIZAÇÃO DE PERFORMANCE: Indexa os lançamentos por data UMA VEZ
-    const entriesByDate = new Map<string, Entry[]>();
-    for (const e of sorted) {
-      const list = entriesByDate.get(e.date) ?? [];
-      list.push(e);
-      entriesByDate.set(e.date, list);
-    }
-
+    // PASSO 2: Montar os meses da Projeção sem fazer loops e recálculos repetidos
     for (const { y, m } of range) {
-      // OTIMIZAÇÃO DE PERFORMANCE: Calcula ocorrências do mês UMA VEZ e indexa por data
-      const ocsByDate = new Map<string, Occurrence[]>();
-      for (const r of recurrences) {
-        for (const o of occurrencesInMonth(r, y, m)) {
-          const list = ocsByDate.get(o.date) ?? [];
-          list.push(o);
-          ocsByDate.set(o.date, list);
-        }
-      }
-
       const total = new Date(y, m + 1, 0).getDate();
+      
       const days = Array.from({ length: total }, (_, idx) => {
         const day = idx + 1;
         const date = iso(y, m, day);
         running = cents(running + (byDate.get(date) ?? 0));
 
-        // Busca instantânea na memória em vez de recalcular milhares de vezes
-        const dayEntries = entriesByDate.get(date) ?? [];
-        const dayOcs = ocsByDate.get(date) ?? [];
-
-        const hasIncome = dayEntries.some(e => e.kind === "entradas") || dayOcs.some(o => o.kind === "entradas");
-        const hasExpense = dayEntries.some(e => e.kind !== "entradas" && e.kind !== "diarios") || dayOcs.some(o => o.kind !== "entradas" && o.kind !== "diarios");
+        // PASSO 3: Apenas pergunta à lista de presença se tem seta (Custo zero de memória)
+        const hasIncome = incomeDays.has(date);
+        const hasExpense = expenseDays.has(date);
         
         return { day, date, balance: running, status: horizonStatusOf(running), hasIncome, hasExpense };
       });
@@ -722,6 +721,7 @@ function IndexForUser({ userId }: { userId: string }) {
 
       out.push({ y, m, label, days });
     }
+    
     return out;
   }, [entries, recurrences, horizonStart]);
   const closingStatus = statusOf(rows.closing);
