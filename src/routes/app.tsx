@@ -250,7 +250,13 @@ function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number
         .reduce((s, it) => cents(s + it.amount), 0);
     }
     running = cents(running + items.reduce((s, it) => cents(s + it.sign * it.amount), 0));
-    return { day, date, totals, balance: running, items };
+    const hasIncome = items.some(it => it.kind === "entradas");
+    const hasExpense = items.some(
+      it => it.kind !== "entradas" && it.kind !== "diarios" && it.kind !== "economias"
+    ) || (items.some(it => it.kind === "economias" && it.horizonTransfer));
+    const isSaved = items.some(it => it.kind === "economias" && !it.horizonTransfer);
+    const dayHasExpense = hasExpense || isSaved;
+  return { day, date, totals, balance: running, items, hasIncome, hasExpense: dayHasExpense };
   });
 
   return { list, opening, closing: running };
