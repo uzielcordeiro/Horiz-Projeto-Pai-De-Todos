@@ -123,7 +123,7 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
               <span className={`relative h-full flex min-w-0 items-center tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
                 
                 {/* Container das Setas: Fixado na esquerda com respiro de 4px (gap-1) entre elas */}
-                <div className="absolute left-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
+               {/* <div className="absolute left-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
                   {d.hasIncome && (
                     <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
                       <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -138,7 +138,8 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
                       </svg>
                     </div>
                   )}
-                </div>
+                </div>   */}
+              
 
                 {/* Container do Valor: Protegido com padding à esquerda para não atropelar as setas */}
                 <span className="grid min-w-0 flex-1 grid-cols-[16px_minmax(0,1fr)] items-center gap-1 z-0 pl-10 pr-2 text-right">
