@@ -679,17 +679,40 @@ function IndexForUser({ userId }: { userId: string }) {
 
     const out: HorizonMonth[] = [];
     let running = opening;
+
+    // OTIMIZAÇÃO DE PERFORMANCE: Indexa os lançamentos por data UMA VEZ
+    const entriesByDate = new Map<string, Entry[]>();
+    for (const e of sorted) {
+      const list = entriesByDate.get(e.date) ?? [];
+      list.push(e);
+      entriesByDate.set(e.date, list);
+    }
+
     for (const { y, m } of range) {
+      // OTIMIZAÇÃO DE PERFORMANCE: Calcula ocorrências do mês UMA VEZ e indexa por data
+      const ocsByDate = new Map<string, Occurrence[]>();
+      for (const r of recurrences) {
+        for (const o of occurrencesInMonth(r, y, m)) {
+          const list = ocsByDate.get(o.date) ?? [];
+          list.push(o);
+          ocsByDate.set(o.date, list);
+        }
+      }
+
       const total = new Date(y, m + 1, 0).getDate();
       const days = Array.from({ length: total }, (_, idx) => {
         const day = idx + 1;
         const date = iso(y, m, day);
         running = cents(running + (byDate.get(date) ?? 0));
-      const ocs = recurrences.flatMap(r => occurrencesInMonth(r, y, m).filter(o => o.date === date));
-        const hasIncome = entries.some(e => e.date === date && e.kind === "entradas") || ocs.some(o => o.kind === "entradas");
-        const hasExpense = entries.some(e => e.date === date && e.kind !== "entradas" && e.kind !== "diarios") || ocs.some(o => o.kind !== "entradas" && o.kind !== "diarios");
+
+        // Busca instantânea na memória em vez de recalcular milhares de vezes
+        const dayEntries = entriesByDate.get(date) ?? [];
+        const dayOcs = ocsByDate.get(date) ?? [];
+
+        const hasIncome = dayEntries.some(e => e.kind === "entradas") || dayOcs.some(o => o.kind === "entradas");
+        const hasExpense = dayEntries.some(e => e.kind !== "entradas" && e.kind !== "diarios") || dayOcs.some(o => o.kind !== "entradas" && o.kind !== "diarios");
+        
         return { day, date, balance: running, status: horizonStatusOf(running), hasIncome, hasExpense };
-    
       });
 
       const label = `${new Date(y, m, 1)
@@ -701,7 +724,6 @@ function IndexForUser({ userId }: { userId: string }) {
     }
     return out;
   }, [entries, recurrences, horizonStart]);
-
   const closingStatus = statusOf(rows.closing);
 
   function shiftMonth(delta: number) {
