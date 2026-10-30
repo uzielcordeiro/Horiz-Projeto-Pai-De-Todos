@@ -109,54 +109,53 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
                 isToday ? "border-b-2 border-foreground" : ""
               } ${d.date === highlightDate ? "horizon-cut-marker" : ""}`}
             >
+              
+              {/* BLOCO DA ESQUERDA: Apenas o número do dia, sem SVGs */}
               <span
                 className={`relative h-full grid place-items-center bg-background/60 tabular-nums ${
                   isToday ? "font-bold text-foreground" : "text-muted-foreground"
                 } ${d.date === highlightDate ? "font-bold text-foreground" : ""}`}
               >
-                {d.hasIncome && !d.hasExpense && (
-                  <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
-                    <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.5l7.5-7.5 7.5 7.5" />
-                    </svg>
-                  </div>
-                )}
-                {!d.hasIncome && d.hasExpense && (
-                  <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
-                    <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.5l-7.5 7.5-7.5-7.5" />
-                    </svg>
-                  </div>
-                )}
-                {d.hasIncome && d.hasExpense && (
-                  <>
-                    <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
-                      <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.5l7.5-7.5 7.5 7.5" />
-                      </svg>
-                    </div>
-                    <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
-                      <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.5l-7.5 7.5-7.5-7.5" />
-                      </svg>
-                    </div>
-                  </>
-                )}
                 <span className="relative z-10">{d.day}</span>
               </span>
-              <span className={`grid min-w-0 grid-cols-[16px_minmax(0,1fr)] items-center gap-1 px-1.5 text-right tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
-                <span className="grid size-4 place-items-center">
-                  {reminder && (
-                    <span
-                      role="img"
-                      aria-label={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
-                      title={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
-                      className={`horizon-reminder horizon-reminder-${reminder}`}
-                    />
-                  )}
+
+              {/* BLOCO DA DIREITA: Saldo financeiro e setas de indicação */}
+              <span className={`relative h-full flex min-w-0 items-center px-1.5 tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
+                
+                {/* Seta de Entrada (Alinhada à Esquerda) */}
+                {d.hasIncome && (
+                  <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                    <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Container do Valor: px-3 para afastar o texto das setas caso elas existam */}
+                <span className="grid min-w-0 flex-1 grid-cols-[16px_minmax(0,1fr)] items-center gap-1 z-10 px-3 text-right">
+                  <span className="grid size-4 place-items-center">
+                    {reminder && (
+                      <span
+                        role="img"
+                        aria-label={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
+                        title={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
+                        className={`horizon-reminder horizon-reminder-${reminder}`}
+                      />
+                    )}
+                  </span>
+                  <span data-fit className="min-w-0"><FitMoney value={d.balance} symbol={false} /></span>
                 </span>
-                <span data-fit className="min-w-0"><FitMoney value={d.balance} symbol={false} /></span>
+
+                {/* Seta de Saída (Alinhada à Direita) */}
+                {d.hasExpense && (
+                  <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                    <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m0 0l-6.75-6.75M12 19.5l6.75-6.75" />
+                    </svg>
+                  </div>
+                )}
               </span>
+
               {!last && <ColumnTick />}
             </button>
           );
@@ -179,7 +178,6 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
   const navYear = `${nav} active:bg-negative`;
   const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
 
-  // 1. Efeito Definitivo: Trava Dinâmica de Eixo (Desktop e Mobile)
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -188,10 +186,8 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
     let activeAxis: "x" | "y" | null = null;
 
     const lockAxis = (axis: "x" | "y") => {
-      if (activeAxis) return; // Se já travou no gesto atual, ignora
+      if (activeAxis) return;
       activeAxis = axis;
-      
-      // Força física no CSS em tempo real (sobrepõe a aceleração de hardware)
       if (axis === "x") {
         el.style.overflowY = "hidden";
         el.style.overflowX = "auto";
@@ -211,12 +207,10 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
       if (!activeAxis) {
         const absX = Math.abs(e.deltaX);
         const absY = Math.abs(e.deltaY);
-        // Detecta a intenção principal e aplica a trava instantaneamente
         if (absX > 2 || absY > 2) {
           lockAxis(absX > absY ? "x" : "y");
         }
       }
-      // Renova o timer da inércia
       if (lockTimeout) clearTimeout(lockTimeout);
       lockTimeout = setTimeout(unlockAxis, 150);
     };
@@ -264,7 +258,6 @@ export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highl
     };
   }, []);
 
-  // 2. Efeito Original: Observador de Área Visível (Renderização sob demanda)
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
