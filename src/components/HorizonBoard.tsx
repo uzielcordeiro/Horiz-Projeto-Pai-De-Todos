@@ -9,6 +9,8 @@ export type HorizonDay = {
   date: string;
   balance: number;
   status: Status;
+  hasIncome?: boolean;
+  hasExpense?: boolean;
 };
 
 export type HorizonMonth = {
@@ -108,11 +110,39 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
               } ${d.date === highlightDate ? "horizon-cut-marker" : ""}`}
             >
               <span
-                className={`h-full grid place-items-center bg-background/60 tabular-nums ${
+                className={`relative h-full grid place-items-center bg-background/60 tabular-nums ${
                   isToday ? "font-bold text-foreground" : "text-muted-foreground"
                 } ${d.date === highlightDate ? "font-bold text-foreground" : ""}`}
               >
-                {d.day}
+                {d.hasIncome && !d.hasExpense && (
+                  <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                    <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.5l7.5-7.5 7.5 7.5" />
+                    </svg>
+                  </div>
+                )}
+                {!d.hasIncome && d.hasExpense && (
+                  <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                    <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.5l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </div>
+                )}
+                {d.hasIncome && d.hasExpense && (
+                  <>
+                    <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                      <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.5l7.5-7.5 7.5 7.5" />
+                      </svg>
+                    </div>
+                    <div className="absolute right-0.5 top-1/2 -translate-y-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                      <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.5l-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </div>
+                  </>
+                )}
+                <span className="relative z-10">{d.day}</span>
               </span>
               <span className={`grid min-w-0 grid-cols-[16px_minmax(0,1fr)] items-center gap-1 px-1.5 text-right tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
                 <span className="grid size-4 place-items-center">
