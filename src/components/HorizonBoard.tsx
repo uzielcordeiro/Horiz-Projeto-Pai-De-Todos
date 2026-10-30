@@ -142,7 +142,7 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
               
 
                 {/* Container do Valor: Protegido com padding à esquerda para não atropelar as setas */}
-                <span className="grid min-w-0 flex-1 grid-cols-[16px_minmax(0,1fr)] items-center gap-1 z-0 pl-10 pr-2 text-right">
+                <span className="min-w-0 flex-1 items-center gap-1 pl-10 pr-2 text-right">
                   <span className="grid size-4 place-items-center">
                     {reminder && (
                       <span
