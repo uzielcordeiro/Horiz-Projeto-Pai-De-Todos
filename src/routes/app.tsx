@@ -685,7 +685,11 @@ function IndexForUser({ userId }: { userId: string }) {
         const day = idx + 1;
         const date = iso(y, m, day);
         running = cents(running + (byDate.get(date) ?? 0));
-        return { day, date, balance: running, status: horizonStatusOf(running) };
+      const ocs = recurrences.flatMap(r => occurrencesInMonth(r, y, m).filter(o => o.date === date));
+        const hasIncome = entries.some(e => e.date === date && e.kind === "entradas") || ocs.some(o => o.kind === "entradas");
+        const hasExpense = entries.some(e => e.date === date && e.kind !== "entradas" && e.kind !== "diarios") || ocs.some(o => o.kind !== "entradas" && o.kind !== "diarios");
+        return { day, date, balance: running, status: horizonStatusOf(running), hasIncome, hasExpense };
+    
       });
 
       const label = `${new Date(y, m, 1)
