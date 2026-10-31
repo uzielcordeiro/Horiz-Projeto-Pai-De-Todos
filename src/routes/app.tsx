@@ -2363,7 +2363,7 @@ function IndexForUser({ userId }: { userId: string }) {
                     <FitMoney value={activeItem.amount} />
                   </p>
                 </div>
-                {activeItem.kind === "economias" ? (
+                {activeItem.kind === "economias" && view !== "horizonte" ? (
                   activeItem.horizonTransfer ? (
                     <button
                       type="button"
