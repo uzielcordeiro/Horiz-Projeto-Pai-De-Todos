@@ -313,6 +313,7 @@ function IndexForUser({ userId }: { userId: string }) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
   const [windowMode, setWindowMode] = useState<"add" | "month" | "list" | "detail" | "edit" | "info" | "horizon" | "pick">("add");
+  const [fromHorizonList, setFromHorizonList] = useState(false);
   const [cameFromPick, setCameFromPick] = useState(false);
   const [activeItemKey, setActiveItemKey] = useState<string | null>(null);
   const [forecastSpent, setForecastSpent] = useState("");
@@ -1741,6 +1742,7 @@ function IndexForUser({ userId }: { userId: string }) {
                 setFormOrigin("horizon");
                 setCameFromPick(false);
                 setActiveItemKey(null);
+                setFromHorizonList(false);
                 setWindowMode("horizon");
                 setAdding(true);
               }}
@@ -1887,6 +1889,7 @@ function IndexForUser({ userId }: { userId: string }) {
           const selectHorizonItem = (key: string) => {
             const item = horizonDayItems.find((it) => it.key === key);
             if (!item) return;
+            setFromHorizonList(true);
             setWindowKind(item.kind);
             if (item.recurrenceId === FORECAST_ID) {
               setKind("diarios");
@@ -1902,6 +1905,7 @@ function IndexForUser({ userId }: { userId: string }) {
           const closeWindow = () => {
             setAdding(false);
             setCameFromPick(false);
+            setFromHorizonList(false);
             setForecastRestoring(false);
             setError(null);
             setShowCal(false);
@@ -2007,10 +2011,16 @@ function IndexForUser({ userId }: { userId: string }) {
                   type="button"
                   onClick={() => {
                     if (windowMode === "edit" && activeItemKey) {
-                      setWindowMode("detail");
-                    } else {
-                      setWindowMode(isMonthListKind ? "month" : "list");
-                    }
+              setWindowMode("detail");
+            } else if (view === "horizonte" && fromHorizonList) {
+              setWindowKind("economias");
+              setFormOrigin("horizon");
+              setCameFromPick(false);
+              setFromHorizonList(false);
+              setWindowMode("horizon");
+            } else {
+              setWindowMode(isMonthListKind ? "month" : "list");
+            }
                   }}
                   aria-label="voltar"
                   title="voltar"
