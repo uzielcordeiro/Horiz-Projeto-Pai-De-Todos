@@ -1961,8 +1961,7 @@ function IndexForUser({ userId }: { userId: string }) {
               windowKind === "cartao"));
 
           const isMonthListKind = windowKind === "entradas" || windowKind === "saidas" || windowKind === "cartao";
-         const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMode === "edit") && (windowDayItems.length > 0 || horizonDayItems.length > 0) && !cameFromPick;
-
+const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMode === "edit") && (windowDayItems.length > 0 || horizonDayItems.length > 0 || fromHorizonList || !!activeItemKey) && !cameFromPick;
           return (
           <AddWindow
             hideClose={showBackBtn || ((windowMode === "add" || windowMode === "info") && cameFromPick)}
@@ -2010,16 +2009,18 @@ function IndexForUser({ userId }: { userId: string }) {
                   type="button"
                   onClick={() => {
                     if (windowMode === "edit" && activeItemKey) {
-              setWindowMode("detail");
-            } else if (view === "horizonte" && fromHorizonList) {
-              setWindowKind("economias");
-              setFormOrigin("horizon");
-              setCameFromPick(false);
-              setFromHorizonList(false);
-              setWindowMode("horizon");
-            } else {
-              setWindowMode(isMonthListKind ? "month" : "list");
-            }
+                      if (activeItem) setFormDate(activeItem.date);
+                      setWindowMode("detail");
+                    } else if (view === "horizonte" && fromHorizonList) {
+                      setWindowKind("economias");
+                      setFormOrigin("horizon");
+                      setCameFromPick(false);
+                      setFromHorizonList(false);
+                      setWindowMode("horizon");
+                    } else {
+                      setWindowMode(isMonthListKind ? "month" : "list");
+                    }
+                  }}
                   }}
                   aria-label="voltar"
                   title="voltar"
