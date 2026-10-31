@@ -1894,9 +1894,12 @@ function IndexForUser({ userId }: { userId: string }) {
            if (item.recurrenceId === FORECAST_ID) {
       setKind("diarios");
       setFormOrigin("horizon");
+      setActiveItemKey(null);
+      setWindowMode("info");
+      return;
     }
-            setActiveItemKey(item.key);
-            setWindowMode("detail");
+    setActiveItemKey(item.key);
+    setWindowMode("detail");
           };
           const closeWindow = () => {
             setAdding(false);
@@ -1964,10 +1967,10 @@ function IndexForUser({ userId }: { userId: string }) {
           <AddWindow
             hideClose={showBackBtn || ((windowMode === "add" || windowMode === "info") && cameFromPick)}
             headerAction={
-              (windowMode === "add" || windowMode === "info") && cameFromPick ? (
-                <Button
-                  type="button"
-                  onClick={() => setWindowMode("pick")}
+             (windowMode === "add" || windowMode === "info") && (cameFromPick || fromHorizonList) ? (
+          <Button
+            type="button"
+            onClick={() => fromHorizonList ? setWindowMode("horizon") : setWindowMode("pick")}
                   aria-label="voltar"
                   title="voltar"
                   className="h-9 shrink-0 gap-1 rounded-full bg-primary px-3 text-xs font-bold text-primary-foreground shadow hover:bg-primary/90"
