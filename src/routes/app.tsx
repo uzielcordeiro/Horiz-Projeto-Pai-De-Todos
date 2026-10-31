@@ -1891,14 +1891,10 @@ function IndexForUser({ userId }: { userId: string }) {
             if (!item) return;
             setFromHorizonList(true);
             setWindowKind(item.kind);
-            if (item.recurrenceId === FORECAST_ID) {
-              setKind("diarios");
-              setEditTarget(null);
-              setActiveItemKey(null);
-              setFormOrigin("standard");
-              setWindowMode("info");
-              return;
-            }
+           if (item.recurrenceId === FORECAST_ID) {
+      setKind("diarios");
+      setFormOrigin("horizon");
+    }
             setActiveItemKey(item.key);
             setWindowMode("detail");
           };
