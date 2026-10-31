@@ -1871,8 +1871,8 @@ function IndexForUser({ userId }: { userId: string }) {
             (it) => it.recurrenceId !== FORECAST_ID && it.kind === windowKind,
           );
           const monthPrefix = iso(formDateParts.y, formDateParts.m, 1).slice(0, 7);
-          const activeItem = windowDayItems.find((item) => item.key === activeItemKey) ?? null;
           const horizonDayItems = windowDayRow?.items ?? [];
+  const activeItem = (windowDayItems.find((item) => item.key === activeItemKey) ?? horizonDayItems.find((item) => item.key === activeItemKey)) ?? null;
           const horizonPicking = windowMode === "pick" || (windowMode === "horizon" && horizonDayItems.length === 0);
           const pickKind = (k: Kind) => {
             resetForm();
@@ -1958,7 +1958,7 @@ function IndexForUser({ userId }: { userId: string }) {
               windowKind === "cartao"));
 
           const isMonthListKind = windowKind === "entradas" || windowKind === "saidas" || windowKind === "cartao";
-          const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMode === "edit") && windowDayItems.length > 0 && !cameFromPick;
+         const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMode === "edit") && (windowDayItems.length > 0 || horizonDayItems.length > 0) && !cameFromPick;
 
           return (
           <AddWindow
