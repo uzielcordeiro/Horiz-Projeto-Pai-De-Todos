@@ -2021,7 +2021,7 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                       setWindowMode(isMonthListKind ? "month" : "list");
                     }
                   }}
-                  }}
+                  
                   aria-label="voltar"
                   title="voltar"
                   className="h-9 shrink-0 gap-1 rounded-full bg-primary px-3 text-xs font-bold text-primary-foreground shadow hover:bg-primary/90"
