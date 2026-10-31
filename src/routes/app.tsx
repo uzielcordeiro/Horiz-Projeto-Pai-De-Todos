@@ -2179,56 +2179,59 @@ function IndexForUser({ userId }: { userId: string }) {
 
             {windowMode === "info" && (
               <div className="rounded-2xl bg-card p-4">
-                <p className="text-sm leading-relaxed font-semibold text-foreground">
-                  Para adicionar ou retirar novos valores, use{" "}
-                  {windowKind === "saldos" ? (
-                    <span className="font-bold tracking-wide text-primary">as outras colunas</span>
-                  ) : windowKind === "economias" ? (
-                    <>
-                      a aba lateral da{" "}
-                      <span className="font-bold tracking-wide text-primary">Projeção</span>
-                    </>
-                  ) : (
-                    <>
-                      o{" "}
-                      <span className="font-bold tracking-wide text-primary">Dia/Dia</span>
-                    </>
-                  )}
-                  .
-                </p>
+                {view !== "horizonte" && (
+                  <>
+                    <p className="text-sm leading-relaxed font-semibold text-foreground">
+                      Para adicionar ou retirar novos valores, use{" "}
+                      {windowKind === "saldos" ? (
+                        <span className="font-bold tracking-wide text-primary">as outras colunas</span>
+                      ) : windowKind === "economias" ? (
+                        <>
+                          a aba lateral da{" "}
+                          <span className="font-bold tracking-wide text-primary">Projeção</span>
+                        </>
+                      ) : (
+                        <>
+                          o{" "}
+                          <span className="font-bold tracking-wide text-primary">Dia/Dia</span>
+                        </>
+                      )}
+                      .
+                    </p>
 
-                {windowKind === "diarios" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      closeWindow();
-                      setView("diario");
-                    }}
-                    className="mt-4 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
-                  >
-                    ir para o Dia/Dia
-                    <span aria-hidden>›</span>
-                  </button>
+                    {windowKind === "diarios" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeWindow();
+                          setView("diario");
+                        }}
+                        className="mt-4 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+                      >
+                        ir para o Dia/Dia
+                        <span aria-hidden>›</span>
+                      </button>
+                    )}
+
+                    {windowKind === "economias" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (activeItem?.horizonTransfer) {
+                            jumpToHorizon(activeItem);
+                          } else {
+                            closeWindow();
+                            setView("horizonte");
+                          }
+                        }}
+                        className="mt-4 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+                      >
+                        ir para a Projeção
+                        <span aria-hidden>›</span>
+                      </button>
+                    )}
+                  </>
                 )}
-
-                {windowKind === "economias" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (activeItem?.horizonTransfer) {
-                        jumpToHorizon(activeItem);
-                      } else {
-                        closeWindow();
-                        setView("horizonte");
-                      }
-                    }}
-                    className="mt-4 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
-                  >
-                    ir para a Projeção
-                    <span aria-hidden>›</span>
-                  </button>
-                )}
-
                 {windowKind === "diarios" && (() => {
                   const fr = recurrences.find((r) => r.id === FORECAST_ID);
                   if (!fr) return null;
@@ -2236,7 +2239,7 @@ function IndexForUser({ userId }: { userId: string }) {
                   const dayValue =
                     windowDayRow?.items.find((it) => it.recurrenceId === FORECAST_ID)?.amount ?? 0;
                   return (
-                    <div className="mt-4 space-y-3 border-t border-border pt-4">
+                    <div className={`space-y-3 ${view !== "horizonte" ? "mt-4 border-t border-border pt-4" : ""}`}>
                       <p className="text-xs font-medium text-muted-foreground">
                         valor do dia {edit === null ? "(apagado — recalculado)" : typeof edit === "number" ? "(gasto real)" : ""}
                       </p>
