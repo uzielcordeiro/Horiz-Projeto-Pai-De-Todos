@@ -232,7 +232,7 @@ function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number
           title: k.title,
           sign: balanceSign(k.key, o.horizonTransfer),
           amount: o.amount,
-          detail: `${o.name || o.label}${
+         detail: `${o.recurrenceId === FORECAST_ID ? "Dia/Dia" : (o.name || o.label)}${
             o.total ? ` · ${o.index}/${o.total}` : " · recorrente"
           }`,
           recurrenceId: o.recurrenceId,
@@ -425,7 +425,7 @@ function IndexForUser({ userId }: { userId: string }) {
     };
   }, [userId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!loaded) return;
     const { monthly: monthlyBudget, weekly: weeklyBudget } = forecastBudgets(forecastItems);
     const perDay = forecastItems.length > 0 ? monthlyBudget + weeklyBudget : 0;
