@@ -71,9 +71,7 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
   return (
     <div className={`flex flex-col h-full w-full select-none ${isDarkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
       
-      {/* ======================================================== */}
-      {/* CABEÇALHO DO HORIZON BOARD COM Z-INDEX BLINDADO          */}
-      {/* ======================================================== */}
+      {/* CABEÇALHO DO HORIZON BOARD COM Z-INDEX BLINDADO */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-background z-30 sticky top-0 shadow-sm">
         <div className="flex items-center space-x-3">
           <h1 className="text-xl font-bold tracking-tight">Projeção</h1>
@@ -93,9 +91,7 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
         </div>
       </div>
 
-      {/* ======================================================== */}
-      /* GRADE VIRTUALIZADA DE MESES E DIAS                       */
-      /* ======================================================== */}
+      {/* GRADE VIRTUALIZADA DE MESES E DIAS */}
       <div 
         ref={scrollContainerRef}
         onScroll={handleScroll}
@@ -153,17 +149,14 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
                       >
                         {isValidDay ? (
                           <>
-                            {/* ======================================================== */}
-                            {/* INÍCIO: BLOCO DA BOLINHA FIXADA À ESQUERDA (NÃO ALTERAR) */}
-                            {/* ======================================================== */}
-                            <div className="flex items-center space-x-1.5 relative">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Maior saldo do mês" />
+                            {/* INÍCIO: BLOCO DA BOLINHA FIXADA À ESQUERDA */}
+                            <div className="flex items-center space-x-1.5 relative pl-3">
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Maior saldo do mês" />
                               <div className="flex items-center text-slate-700 dark:text-slate-300">
                                 <ArrowUpRight className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                               </div>
                             </div>
-                            {/* ======================================================== */}
-                            {/* FIM DO BLOCO DA BOLINHA                                  */.trim() ? /* Fim do Bloco */ null : null}
+                            {/* FIM DO BLOCO DA BOLINHA */}
 
                             {/* Valor Monetário Alinhado à Direita */}
                             <span className="font-medium tabular-nums text-right">
