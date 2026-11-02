@@ -1,30 +1,47 @@
 /* ======================================================== */
-/* INÍCIO: COMPONENTE HORIZONBOARD (PROJEÇÃO FINANCEIRA)     */
+/* INÍCIO: COMPONENTE HORIZONBOARD (PROJEÇÃO FINANCEIRA)    */
 /* ======================================================== */
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useStore } from "../lib/user-storage";
-import { Moon, Sun, ArrowUpRight } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Moon, Sun, ArrowUpRight, ArrowDownRight } from "lucide-react";
+
+export type HorizonDay = {
+  day: number;
+  date: string;
+  balance: number;
+  status: "positive" | "warning" | "negative" | "negativeDeep" | "surplus";
+  hasIncome: boolean;
+  hasExpense: boolean;
+};
+
+export type HorizonMonth = {
+  y: number;
+  m: number;
+  label: string;
+  days: HorizonDay[];
+};
 
 interface HorizonBoardProps {
-  onOpenDayModal?: (dateStr: string) => void;
+  highlightDate?: string | null;
+  months: HorizonMonth[];
+  todayIso: string;
+  onToday: () => void;
+  onShift: (delta: number) => void;
+  onPick: (y: number, m: number, day: number) => void;
 }
 
 const COLUMN_WIDTH = 160;
 const OVERSCAN = 3;
 
 /* ======================================================== */
-/* INÍCIO: FORMATAÇÃO MONETÁRIA ISOLADA (EVITA MISSING EXPORT) */
+/* FORMATAÇÃO MONETÁRIA NATIVA                              */
 /* ======================================================== */
 const formatMoney = (val: number) => {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 };
-/* ======================================================== */
 
-export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
-  const { transactions, settings, updateSettings, resetData } = useStore();
+export function HorizonBoard({ highlightDate, months, todayIso, onToday, onShift, onPick }: HorizonBoardProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [containerWidth, setContainerWidth] = useState(1200);
@@ -46,34 +63,9 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
     setScrollLeft(e.currentTarget.scrollLeft);
   };
 
-  const monthsData = useMemo(() => {
-    const data = [];
-    const startDate = new Date();
-    startDate.setDate(1);
-
-    for (let i = 0; i < 24; i++) {
-      const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
-      const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
-      const monthLabel = d.toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
-
-      data.push({
-        key: monthKey,
-        label: monthLabel,
-        year,
-        month,
-        daysInMonth,
-      });
-    }
-    return data;
-  }, []);
-
-  const totalWidth = monthsData.length * COLUMN_WIDTH;
+  const totalWidth = months.length * COLUMN_WIDTH;
   const startIndex = Math.max(0, Math.floor(scrollLeft / COLUMN_WIDTH) - OVERSCAN);
-  const endIndex = Math.min(monthsData.length, Math.ceil((scrollLeft + containerWidth) / COLUMN_WIDTH) + OVERSCAN);
+  const endIndex = Math.min(months.length, Math.ceil((scrollLeft + containerWidth) / COLUMN_WIDTH) + OVERSCAN);
 
   return (
     <div className={`flex flex-col h-full w-full select-none ${isDarkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
@@ -88,6 +80,9 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
         </div>
         
         <div className="flex items-center space-x-2">
+          <button onClick={onToday} className="mr-3 text-xs font-bold uppercase text-primary hover:opacity-80 transition-opacity">
+            Hoje
+          </button>
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-2 rounded-full hover:bg-secondary transition-colors"
@@ -108,11 +103,11 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
           
           {/* Cabeçalho dos Meses */}
           <div className="sticky top-0 z-20 flex bg-background border-b border-border shadow-xs">
-            {monthsData.slice(startIndex, endIndex).map((m, idx) => {
+            {months.slice(startIndex, endIndex).map((m, idx) => {
               const absoluteIndex = startIndex + idx;
               return (
                 <div
-                  key={m.key}
+                  key={`${m.y}-${m.m}`}
                   style={{
                     position: "absolute",
                     left: `${absoluteIndex * COLUMN_WIDTH}px`,
@@ -132,13 +127,16 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
               const dayNum = dayIndex + 1;
               return (
                 <div key={dayNum} className="flex h-11 items-center border-b border-border/40">
-                  {monthsData.slice(startIndex, endIndex).map((m, idx) => {
+                  {months.slice(startIndex, endIndex).map((m, idx) => {
                     const absoluteIndex = startIndex + idx;
-                    const isValidDay = dayNum <= m.daysInMonth;
+                    const dayData = m.days.find(d => d.day === dayNum);
+                    const isValidDay = !!dayData;
+                    const isToday = dayData?.date === todayIso;
+                    const isHighlighted = dayData?.date === highlightDate;
 
                     return (
                       <div
-                        key={`${m.key}-${dayNum}`}
+                        key={`${m.y}-${m.m}-${dayNum}`}
                         style={{
                           position: "absolute",
                           left: `${absoluteIndex * COLUMN_WIDTH}px`,
@@ -146,28 +144,28 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
                         }}
                         className={`h-full px-2 flex items-center justify-between border-r border-border/30 text-xs transition-colors ${
                           isValidDay ? "hover:bg-secondary/50 cursor-pointer" : "opacity-30 bg-secondary/10"
-                        }`}
+                        } ${isHighlighted ? "bg-primary/20" : ""}`}
                         onClick={() => {
-                          if (isValidDay && onOpenDayModal) {
-                            const dateStr = `${m.year}-${String(m.month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-                            onOpenDayModal(dateStr);
-                          }
+                          if (isValidDay) onPick(m.y, m.m, dayNum);
                         }}
                       >
                         {isValidDay ? (
                           <>
-                            {/* INÍCIO: BLOCO DA BOLINHA FIXADA À ESQUERDA */}
+                            {/* BLOCO DE MARCADORES (ESQUERDA) */}
                             <div className="flex items-center space-x-1.5 relative pl-3">
-                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Maior saldo do mês" />
-                              <div className="flex items-center text-slate-700 dark:text-slate-300">
-                                <ArrowUpRight className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                              {isToday && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Hoje" />}
+                              {dayData.status === "negativeDeep" && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500 shrink-0" title="Maior dívida" />}
+                              {dayData.status === "surplus" && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Maior saldo" />}
+                              
+                              <div className="flex items-center">
+                                {dayData.hasIncome && <ArrowUpRight className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />}
+                                {dayData.hasExpense && <ArrowDownRight className="w-3 h-3 text-red-600 dark:text-red-400" />}
                               </div>
                             </div>
-                            {/* FIM DO BLOCO DA BOLINHA */}
 
-                            {/* Valor Monetário Alinhado à Direita */}
-                            <span className="font-medium tabular-nums text-right">
-                              {formatMoney(1443.40)}
+                            {/* VALOR MONETÁRIO COM COR DINÂMICA (DIREITA) */}
+                            <span className={`font-medium tabular-nums text-right ${dayData.status.includes('negative') ? 'text-red-500 dark:text-red-400' : ''}`}>
+                              {formatMoney(dayData.balance)}
                             </span>
                           </>
                         ) : (
@@ -183,11 +181,9 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
 
         </div>
       </div>
-
     </div>
   );
 }
-
 /* ======================================================== */
 /* FIM DO COMPONENTE HORIZONBOARD                           */
 /* ======================================================== */
