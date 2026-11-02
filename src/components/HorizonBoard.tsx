@@ -2,10 +2,10 @@
 /* INÍCIO: COMPONENTE HORIZONBOARD (PROJEÇÃO FINANCEIRA)     */
 /* ======================================================== */
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useStore } from "../lib/user-storage";
 import { formatMoney } from "../lib/money-format";
-import { Moon, Sun, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { Moon, Sun, ArrowUpRight } from "lucide-react";
 
 interface HorizonBoardProps {
   onOpenDayModal?: (dateStr: string) => void;
@@ -13,13 +13,11 @@ interface HorizonBoardProps {
 
 const COLUMN_WIDTH = 160;
 const OVERSCAN = 3;
-const INITIAL_COLUMNS = 12;
 
 export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
   const { transactions, settings, updateSettings, resetData } = useStore();
   const [isDarkMode, setIsDarkMode] = useState(false);
   
-  // Controle de scroll bidirecional e virtualização de colunas
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [containerWidth, setContainerWidth] = useState(1200);
@@ -41,7 +39,6 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
     setScrollLeft(e.currentTarget.scrollLeft);
   };
 
-  // Gerador de meses e matriz de saldos (Respeitando rigorosamente o motor de contas central)
   const monthsData = useMemo(() => {
     const data = [];
     const startDate = new Date();
@@ -75,8 +72,8 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
     <div className={`flex flex-col h-full w-full select-none ${isDarkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
       
       {/* ======================================================== */}
-      /* CABEÇALHO DO HORIZON BOARD COM Z-INDEX BLINDADO          */
-      /* ======================================================== */}
+      {/* CABEÇALHO DO HORIZON BOARD COM Z-INDEX BLINDADO          */}
+      {/* ======================================================== */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-background z-30 sticky top-0 shadow-sm">
         <div className="flex items-center space-x-3">
           <h1 className="text-xl font-bold tracking-tight">Projeção</h1>
@@ -106,7 +103,7 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
       >
         <div style={{ width: `${totalWidth}px`, height: "100%", position: "relative" }}>
           
-          {/* Cabeçalho dos Meses (Z-Index Superior - Fixo no Topo da Grade) */}
+          {/* Cabeçalho dos Meses */}
           <div className="sticky top-0 z-20 flex bg-background border-b border-border shadow-xs">
             {monthsData.slice(startIndex, endIndex).map((m, idx) => {
               const absoluteIndex = startIndex + idx;
@@ -157,22 +154,18 @@ export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
                         {isValidDay ? (
                           <>
                             {/* ======================================================== */}
-                            /* INÍCIO: BLOCO DA BOLINHA FIXADA À ESQUERDA (NÃO ALTERAR) */
-                            /* ======================================================== */}
+                            {/* INÍCIO: BLOCO DA BOLINHA FIXADA À ESQUERDA (NÃO ALTERAR) */}
+                            {/* ======================================================== */}
                             <div className="flex items-center space-x-1.5 relative">
-                              {/* Bolinha de Extremo (Reminder) posicionada estritamente na margem esquerda */}
                               <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Maior saldo do mês" />
-                              
-                              {/* Setas de Receita / Despesa com alto contraste */}
                               <div className="flex items-center text-slate-700 dark:text-slate-300">
                                 <ArrowUpRight className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                               </div>
                             </div>
                             {/* ======================================================== */}
-                            /* FIM DO BLOCO DA BOLINHA                                  */
-                            /* ======================================================== */}
+                            {/* FIM DO BLOCO DA BOLINHA                                  */.trim() ? /* Fim do Bloco */ null : null}
 
-                            {/* Valor Monetário (FitMoney) Alinhado à Direita */}
+                            {/* Valor Monetário Alinhado à Direita */}
                             <span className="font-medium tabular-nums text-right">
                               {formatMoney(1443.40)}
                             </span>
