@@ -4,7 +4,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useStore } from "../lib/user-storage";
-import { formatMoney } from "../lib/money-format";
 import { Moon, Sun, ArrowUpRight } from "lucide-react";
 
 interface HorizonBoardProps {
@@ -13,6 +12,14 @@ interface HorizonBoardProps {
 
 const COLUMN_WIDTH = 160;
 const OVERSCAN = 3;
+
+/* ======================================================== */
+/* INÍCIO: FORMATAÇÃO MONETÁRIA ISOLADA (EVITA MISSING EXPORT) */
+/* ======================================================== */
+const formatMoney = (val: number) => {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
+};
+/* ======================================================== */
 
 export function HorizonBoard({ onOpenDayModal }: HorizonBoardProps) {
   const { transactions, settings, updateSettings, resetData } = useStore();
