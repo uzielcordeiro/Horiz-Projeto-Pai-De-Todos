@@ -1,17 +1,25 @@
-/* ======================================================== */
-/* INÍCIO: COMPONENTE HORIZONBOARD (PROJEÇÃO FINANCEIRA)    */
-/* ======================================================== */
+/* ========================================================================== */
+/* BEM-VINDO AO HORIZONBOARD.TSX                                              */
+/* Este arquivo renderiza o quadro da Projeção Financeira (Matriz de Meses).  */
+/* ========================================================================== */
 
-import React, { useState, useRef, useEffect } from "react";
-import { Moon, Sun, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { FitMoney } from "@/components/FitMoney";
+import { Button } from "@/components/ui/button";
+import { memo, useEffect, useRef, useState } from "react";
+
+/* -------------------------------------------------------------------------- */
+/* TIPAGENS E ESTRUTURAS DE DADOS DA PROJEÇÃO                                 */
+/* -------------------------------------------------------------------------- */
+
+type Status = "surplus" | "positive" | "warning" | "negative" | "negativeDeep";
 
 export type HorizonDay = {
   day: number;
   date: string;
   balance: number;
-  status: "positive" | "warning" | "negative" | "negativeDeep" | "surplus";
-  hasIncome: boolean;
-  hasExpense: boolean;
+  status: Status;
+  hasIncome?: boolean;
+  hasExpense?: boolean;
 };
 
 export type HorizonMonth = {
@@ -21,169 +29,389 @@ export type HorizonMonth = {
   days: HorizonDay[];
 };
 
-interface HorizonBoardProps {
-  highlightDate?: string | null;
-  months: HorizonMonth[];
-  todayIso: string;
-  onToday: () => void;
-  onShift: (delta: number) => void;
-  onPick: (y: number, m: number, day: number) => void;
-}
-
-const COLUMN_WIDTH = 160;
-const OVERSCAN = 3;
-
-/* ======================================================== */
-/* FORMATAÇÃO MONETÁRIA NATIVA                              */
-/* ======================================================== */
-const formatMoney = (val: number) => {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
+/* Mapeamento de classes visuais do Tailwind para cada faixa de saldo */
+const cell: Record<Status, string> = {
+  surplus: "bg-surplus text-surplus-foreground",
+  positive: "bg-horizon-positive-cell text-positive",
+  warning: "bg-horizon-warning-cell text-horizon-warning-text",
+  negative: "bg-horizon-negative-cell text-negative",
+  negativeDeep: "bg-horizon-debt-cell text-negative-deep-text",
 };
 
-export function HorizonBoard({ highlightDate, months, todayIso, onToday, onShift, onPick }: HorizonBoardProps) {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(1200);
+/* Legenda oficial de cores dos dias (vermelho até verde-escuro) */
+const legend: { label: string; dotClass: string }[] = [
+  { label: "R$ 999 negativo ou menos", dotClass: "bg-horizon-negative-cell" },
+  { label: "R$ 1.000 negativo ou mais", dotClass: "bg-horizon-debt-cell" },
+  { label: "entre R$ 0 e R$ 1.000", dotClass: "bg-horizon-warning-cell" },
+  { label: "R$ 1.000 até R$ 2.000", dotClass: "bg-horizon-positive-cell" },
+  { label: "acima de R$ 2.000", dotClass: "bg-surplus" },
+];
 
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      setContainerWidth(scrollContainerRef.current.clientWidth);
-    }
-    const handleResize = () => {
-      if (scrollContainerRef.current) {
-        setContainerWidth(scrollContainerRef.current.clientWidth);
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+type Props = {
+  months: HorizonMonth[];
+  onShift: (delta: number) => void;
+  onToday: () => void;
+  onPick: (y: number, m: number, day: number) => void;
+  todayIso: string;
+  highlightDate?: string | null;
+};
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollLeft(e.currentTarget.scrollLeft);
-  };
+type ColumnProps = {
+  mo: HorizonMonth;
+  maxDays: number;
+  todayIso: string;
+  highlightDate?: string | null | undefined;
+  onPick: (y: number, m: number, day: number) => void;
+  last?: boolean;
+};
 
-  const totalWidth = months.length * COLUMN_WIDTH;
-  const startIndex = Math.max(0, Math.floor(scrollLeft / COLUMN_WIDTH) - OVERSCAN);
-  const endIndex = Math.min(months.length, Math.ceil((scrollLeft + containerWidth) / COLUMN_WIDTH) + OVERSCAN);
+/* -------------------------------------------------------------------------- */
+/* COMPONENTE: TRACINHO VERTICAL ENTRE COLUNAS DE MESES                      */
+/* -------------------------------------------------------------------------- */
+
+function ColumnTick() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute right-0 top-1/2 h-[18px] w-px -translate-y-1/2 bg-border/70"
+    />
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* COMPONENTE: COLUNA DE UM MÊS INTEIRO (COM VIRTUALIZAÇÃO)                   */
+/* -------------------------------------------------------------------------- */
+
+const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlightDate, onPick, last }: ColumnProps) {
+  /* Identifica o dia de menor saldo (pico negativo do mês) */
+  const lowest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
+    !best || day.balance < best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
+  undefined);
+
+  /* Identifica o dia de maior saldo (pico positivo do mês) */
+  const highest = mo.days.reduce<HorizonDay | undefined>((best, day) =>
+    !best || day.balance > best.balance || (day.balance === best.balance && day.day < best.day) ? day : best,
+  undefined);
 
   return (
-    <div className={`flex flex-col h-full w-full select-none ${isDarkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
-      
-      {/* CABEÇALHO DO HORIZON BOARD COM Z-INDEX BLINDADO */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-background z-30 sticky top-0 shadow-sm">
-        <div className="flex items-center space-x-3">
-          <h1 className="text-xl font-bold tracking-tight">Projeção</h1>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-muted-foreground font-medium">
-            GPS Financeiro Contínuo
-          </span>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <button onClick={onToday} className="mr-3 text-xs font-bold uppercase text-primary hover:opacity-80 transition-opacity">
-            Hoje
-          </button>
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="p-2 rounded-full hover:bg-secondary transition-colors"
-            title="Alternar Tema"
-          >
-            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-          </button>
-        </div>
-      </div>
-
-      {/* GRADE VIRTUALIZADA DE MESES E DIAS */}
-      <div 
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-auto relative w-full"
+    <div className="w-40 shrink-0">
+      {/* ==================================================================== */}
+      {/* CABEÇALHO DA COLUNA DO MÊS (FIXO AO ROLAR - STICKY)                   */}
+      {/* ==================================================================== */}
+      <button
+        type="button"
+        onClick={() => onPick(mo.y, mo.m, 1)}
+        className="sticky top-0 z-10 relative block w-full border-b border-border bg-secondary px-3 py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-accent"
       >
-        <div style={{ width: `${totalWidth}px`, height: "100%", position: "relative" }}>
+        {mo.label}
+        {!last && <ColumnTick />}
+      </button>
+
+      {/* ==================================================================== */}
+      {/* LISTAGEM DOS DIAS DO MÊS                                             */}
+      {/* ==================================================================== */}
+      <div className="divide-y divide-border">
+        {Array.from({ length: maxDays }, (_, i) => {
+          const d = mo.days[i];
+          if (!d)
+            return (
+              <div key={i} className="relative h-8 bg-muted/20" aria-hidden>
+                {!last && <ColumnTick />}
+              </div>
+            );
           
-          {/* Cabeçalho dos Meses */}
-          <div className="sticky top-0 z-20 flex bg-background border-b border-border shadow-xs">
-            {months.slice(startIndex, endIndex).map((m, idx) => {
-              const absoluteIndex = startIndex + idx;
-              return (
-                <div
-                  key={`${m.y}-${m.m}`}
-                  style={{
-                    position: "absolute",
-                    left: `${absoluteIndex * COLUMN_WIDTH}px`,
-                    width: `${COLUMN_WIDTH}px`,
-                  }}
-                  className="py-3 text-center font-semibold text-sm border-r border-border truncate bg-card/80 backdrop-blur-xs"
-                >
-                  {m.label}
-                </div>
-              );
-            })}
-          </div>
+          /* Define se a célula recebe marcador de extremo mensal (reminder) */
+          const reminder = d.date === lowest?.date && d.balance <= -1000
+            ? "negative"
+            : d.date === highest?.date && d.balance > 2000 ? "positive" : undefined;
+          
+          const isToday = d.date === todayIso;
 
-          {/* Linhas dos Dias (1 a 31) */}
-          <div className="relative pt-2">
-            {Array.from({ length: 31 }).map((_, dayIndex) => {
-              const dayNum = dayIndex + 1;
-              return (
-                <div key={dayNum} className="flex h-11 items-center border-b border-border/40">
-                  {months.slice(startIndex, endIndex).map((m, idx) => {
-                    const absoluteIndex = startIndex + idx;
-                    const dayData = m.days.find(d => d.day === dayNum);
-                    const isValidDay = !!dayData;
-                    const isToday = dayData?.date === todayIso;
-                    const isHighlighted = dayData?.date === highlightDate;
+          return (
+            <button
+              key={d.date}
+              type="button"
+              data-horizon-day={d.date}
+              data-horizon-highlighted={d.date === highlightDate ? "true" : undefined}
+              onClick={() => onPick(mo.y, mo.m, d.day)}
+              className={`relative grid h-8 w-full grid-cols-[34px_minmax(0,1fr)] items-center text-xs transition-opacity hover:opacity-80 ${cell[d.status]} ${
+                isToday ? "border-b-2 border-foreground" : ""
+              } ${d.date === highlightDate ? "horizon-cut-marker" : ""}`}
+            >
+              
+              {/* ============================================================ */}
+              {/* BLOCO DA ESQUERDA: NÚMERO DO DIA                             */}
+              {/* ============================================================ */}
+              <span
+                className={`relative h-full grid place-items-center bg-background/60 tabular-nums ${
+                  isToday ? "font-bold text-foreground" : "text-muted-foreground"
+                } ${d.date === highlightDate ? "font-bold text-foreground" : ""}`}
+              >
+                <span className="relative z-10">{d.day}</span>
+              </span>
 
-                    return (
-                      <div
-                        key={`${m.y}-${m.m}-${dayNum}`}
-                        style={{
-                          position: "absolute",
-                          left: `${absoluteIndex * COLUMN_WIDTH}px`,
-                          width: `${COLUMN_WIDTH}px`,
-                        }}
-                        className={`h-full px-2 flex items-center justify-between border-r border-border/30 text-xs transition-colors ${
-                          isValidDay ? "hover:bg-secondary/50 cursor-pointer" : "opacity-30 bg-secondary/10"
-                        } ${isHighlighted ? "bg-primary/20" : ""}`}
-                        onClick={() => {
-                          if (isValidDay) onPick(m.y, m.m, dayNum);
-                        }}
-                      >
-                        {isValidDay ? (
-                          <>
-                            {/* BLOCO DE MARCADORES (ESQUERDA) */}
-                            <div className="flex items-center space-x-1.5 relative pl-3">
-                              {isToday && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Hoje" />}
-                              {dayData.status === "negativeDeep" && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500 shrink-0" title="Maior dívida" />}
-                              {dayData.status === "surplus" && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Maior saldo" />}
-                              
-                              <div className="flex items-center">
-                                {dayData.hasIncome && <ArrowUpRight className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />}
-                                {dayData.hasExpense && <ArrowDownRight className="w-3 h-3 text-red-600 dark:text-red-400" />}
-                              </div>
-                            </div>
+              {/* ============================================================ */}
+              {/* BLOCO DA DIREITA: SALDO E SETAS DE ENTRADA/SAÍDA              */}
+              {/* ============================================================ */}
+              <span className={`relative h-full flex min-w-0 items-center tabular-nums ${d.status === "negativeDeep" ? "font-bold" : "font-semibold"}`}>
+                
+                {/* ---------------------------------------------------------- */}
+                {/* SETAS DE INDICAÇÃO (FIXADAS À ESQUERDA)                    */}
+                {/* ---------------------------------------------------------- */}
+                <div className="absolute left-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
+                  {d.hasIncome && (
+                    <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                      <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />
+                      </svg>
+                    </div>
+                  )}
+                  {d.hasExpense && (
+                    <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                      <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m0 0l-6.75-6.75M12 19.5l6.75-6.75" />
+                      </svg>
+                    </div>
+                  )}
+                </div>  
 
-                            {/* VALOR MONETÁRIO COM COR DINÂMICA (DIREITA) */}
-                            <span className={`font-medium tabular-nums text-right ${dayData.status.includes('negative') ? 'text-red-500 dark:text-red-400' : ''}`}>
-                              {formatMoney(dayData.balance)}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground/30 text-[10px] mx-auto">-</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
+                {/* ---------------------------------------------------------- */}
+                {/* VALOR FINANCEIRO (COM FITMONEY)                            */}
+                {/* ---------------------------------------------------------- */}
+                <span className="min-w-0 flex-1 items-center gap-1 pl-10 pr-2 text-right">
+                  <span className="grid size-4 place-items-center">
+                    {reminder && (
+                      <span
+                        role="img"
+                        aria-label={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
+                        title={reminder === "negative" ? "Menor saldo do mês" : "Maior saldo do mês"}
+                        className={`horizon-reminder horizon-reminder-${reminder}`}
+                      />
+                    )}
+                  </span>
+                  <span data-fit className="min-w-0"><FitMoney value={d.balance} symbol={false} /></span>
+                </span>
+              </span>
 
-        </div>
+              {!last && <ColumnTick />}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
+});
+
+/* -------------------------------------------------------------------------- */
+/* CONFIGURAÇÕES DE PERFORMANCE E RENDERIZAÇÃO VIRTUALIZADA                   */
+/* -------------------------------------------------------------------------- */
+
+const COLUMN_WIDTH = 160;
+const OVERSCAN = 3;
+const INITIAL_COLUMNS = 12;
+
+/* -------------------------------------------------------------------------- */
+/* COMPONENTE PRINCIPAL: HORIZONBOARD                                         */
+/* -------------------------------------------------------------------------- */
+
+export function HorizonBoard({ months, onShift, onToday, onPick, todayIso, highlightDate }: Props) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [range, setRange] = useState({ from: 0, to: INITIAL_COLUMNS });
+  
+  /* Estilização dos botões de navegação temporal */
+  const nav =
+    "grid size-9 shrink-0 place-items-center rounded-full border-2 border-foreground text-foreground transition-colors hover:bg-accent";
+  const navMonth = `${nav} active:bg-surplus`;
+  const navYear = `${nav} active:bg-negative`;
+  const maxDays = Math.max(...months.map((mo) => mo.days.length), 31);
+
+  /* ======================================================================== */
+  /* GESTÃO DE ROLAGEM BIDIRECIONAL (TRAVA DE EIXOS / WHEEL & TOUCH)            */
+  /* ======================================================================== */
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    let lockTimeout: NodeJS.Timeout | null = null;
+    let activeAxis: "x" | "y" | null = null;
+
+    const lockAxis = (axis: "x" | "y") => {
+      if (activeAxis) return;
+      activeAxis = axis;
+      if (axis === "x") {
+        el.style.overflowY = "hidden";
+        el.style.overflowX = "auto";
+      } else {
+        el.style.overflowX = "hidden";
+        el.style.overflowY = "auto";
+      }
+    };
+
+    const unlockAxis = () => {
+      activeAxis = null;
+      el.style.overflowX = "auto";
+      el.style.overflowY = "auto";
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!activeAxis) {
+        const absX = Math.abs(e.deltaX);
+        const absY = Math.abs(e.deltaY);
+        if (absX > 2 || absY > 2) {
+          lockAxis(absX > absY ? "x" : "y");
+        }
+      }
+      if (lockTimeout) clearTimeout(lockTimeout);
+      lockTimeout = setTimeout(unlockAxis, 150);
+    };
+
+    let startX = 0;
+    let startY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!activeAxis && e.touches.length === 1) {
+        const dx = Math.abs(e.touches[0].clientX - startX);
+        const dy = Math.abs(e.touches[0].clientY - startY);
+        if (dx > 5 || dy > 5) {
+          lockAxis(dx > dy ? "x" : "y");
+        }
+      }
+      if (lockTimeout) clearTimeout(lockTimeout);
+      lockTimeout = setTimeout(unlockAxis, 150);
+    };
+
+    const handleScroll = () => {
+      if (activeAxis) {
+        if (lockTimeout) clearTimeout(lockTimeout);
+        lockTimeout = setTimeout(unlockAxis, 150);
+      }
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: true });
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchmove", handleTouchMove, { passive: true });
+    el.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchmove", handleTouchMove);
+      el.removeEventListener("scroll", handleScroll);
+      if (lockTimeout) clearTimeout(lockTimeout);
+    };
+  }, []);
+
+  /* ======================================================================== */
+  /* CONTROLE DA JANELA DE RENDERIZAÇÃO VIRTUALIZADA (OVERSCAN)                */
+  /* ======================================================================== */
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const update = () => {
+      const width = el.clientWidth || INITIAL_COLUMNS * COLUMN_WIDTH;
+      const from = Math.max(0, Math.floor(el.scrollLeft / COLUMN_WIDTH) - OVERSCAN);
+      const to = Math.ceil((el.scrollLeft + width) / COLUMN_WIDTH) + OVERSCAN;
+      setRange((r) => (r.from === from && r.to === to ? r : { from, to }));
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro?.disconnect();
+    };
+  }, [months.length]);
+
+  const from = Math.min(range.from, months.length);
+  const to = Math.min(range.to, months.length);
+
+  return (
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+      
+      {/* ==================================================================== */}
+      {/* CABEÇALHO DA ABA: LEGENDA DE CORES E BOTÕES DE NAVEGAÇÃO TEMPORAL    */}
+      {/* ==================================================================== */}
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        {/* Legenda de status de saldo */}
+        <ul className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+          {legend.map((item) => (
+            <li key={item.label} className="flex items-center gap-1.5 whitespace-nowrap">
+              <span aria-hidden className={`size-3 shrink-0 rounded-full ${item.dotClass}`} />
+              <span className="truncate">{item.label}</span>
+            </li>
+          ))}
+        </ul>
+
+        {/* Controles de avanço, recuo e botão "hoje" */}
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              const scroller = scrollerRef.current;
+              if (scroller) {
+                scroller.scrollLeft = 0;
+                scroller.scrollTop = 0;
+              }
+              setRange({ from: 0, to: INITIAL_COLUMNS });
+              onToday();
+            }}
+            className="mr-2 h-9 rounded-full border-[1.5px] border-foreground/30 bg-accent/60 px-3 text-xs font-bold text-foreground transition-colors hover:bg-accent sm:mr-3"
+          >
+            hoje
+          </Button>
+          <button onClick={() => onShift(-12)} aria-label="12 meses antes" className={navYear}>
+            «
+          </button>
+          <button onClick={() => onShift(-1)} aria-label="mês anterior" className={navMonth}>
+            ‹
+          </button>
+          <button onClick={() => onShift(1)} aria-label="próximo mês" className={navMonth}>
+            ›
+          </button>
+          <button onClick={() => onShift(12)} aria-label="12 meses depois" className={navYear}>
+            »
+          </button>
+        </div>
+      </div>
+
+      {/* ==================================================================== */}
+      {/* CONTÊINER PRINCIPAL DE ROLAGEM DA MATRIZ                             */}
+      {/* ==================================================================== */}
+      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border">
+        <div
+          ref={scrollerRef}
+          className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-2xl"
+          style={{
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          <div className="flex min-w-max">
+            {from > 0 && <div aria-hidden className="shrink-0" style={{ width: from * COLUMN_WIDTH }} />}
+            {months.slice(from, to).map((mo, i) => (
+              <MonthColumn
+                key={`${mo.y}-${mo.m}`}
+                mo={mo}
+                maxDays={maxDays}
+                todayIso={todayIso}
+                highlightDate={highlightDate}
+                onPick={onPick}
+                last={from + i === months.length - 1}
+              />
+            ))}
+            {to < months.length && (
+              <div aria-hidden className="shrink-0" style={{ width: (months.length - to) * COLUMN_WIDTH }} />
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
-/* ======================================================== */
-/* FIM DO COMPONENTE HORIZONBOARD                           */
-/* ======================================================== */
