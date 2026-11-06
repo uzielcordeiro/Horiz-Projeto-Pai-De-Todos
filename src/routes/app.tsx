@@ -2009,7 +2009,8 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                   type="button"
                   onClick={() => {
                     if (windowMode === "edit" && activeItemKey) {
-                      if (activeItem) setFormDate(activeItem.date);
+                     if (view === "horizonte" && selectedDay !== null) setFormDate(iso(cursor.y, cursor.m, selectedDay));
+                      else if (activeItem) setFormDate(activeItem.date);
                       setWindowMode("detail");
                     } else if (view === "horizonte" && fromHorizonList) {
                       setWindowKind("economias");
