@@ -2059,6 +2059,8 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                       month: "long",
                       year: "numeric",
                     })
+                   : view === "horizonte" && windowMode === "edit" && editTarget?.type === "rec"
+                  ? `Série desde ${String(formDateParts.d).padStart(2, "0")}/${["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][formDateParts.m]}/${formDateParts.y}`
                 : new Date(formDateParts.y, formDateParts.m, formDateParts.d).toLocaleDateString(
                     "pt-BR",
                     { day: "2-digit", month: "long", year: "numeric" },
