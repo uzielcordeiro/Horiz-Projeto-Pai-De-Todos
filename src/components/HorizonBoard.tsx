@@ -160,14 +160,14 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
                 {/* ---------------------------------------------------------- */}
                <div className={`absolute ${reminder ? "left-[26px]" : "left-1.5"} top-1/2 -translate-y-1/2 flex items-center gap-1 z-10`}>
                   {d.hasIncome && (
-                    <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                   <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[oklch(0.129_0.042_264.695)]/5 text-[oklch(0.129_0.042_264.695)]/40">
                       <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />
                       </svg>
                     </div>
                   )}
                   {d.hasExpense && (
-                    <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/5 text-foreground/40">
+                   <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[oklch(0.129_0.042_264.695)]/5 text-[oklch(0.129_0.042_264.695)]/40">
                       <svg aria-hidden className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m0 0l-6.75-6.75M12 19.5l6.75-6.75" />
                       </svg>
