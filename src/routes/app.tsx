@@ -22,7 +22,7 @@ import { cents } from "@/lib/money-format";
 import { monthItemLabel } from "@/lib/month-item-label";
 import { CalendarItemLabel } from "@/components/CalendarItemLabel";
 import { HorizonDayList } from "@/components/HorizonDayList";
-import { horizonMonthRange, shiftCalendarMonth, shiftHorizonMonth } from "@/lib/calendar-navigation";
+import { accountCalendarLimit, horizonMonthRange, shiftCalendarMonth, shiftHorizonMonth } from "@/lib/calendar-navigation";
 import { useCalendarSwipe } from "@/hooks/use-calendar-swipe";
 
 import { DailyForecastBoard, type ForecastItem } from "@/components/DailyForecastBoard";
@@ -267,13 +267,14 @@ type MonthRows = ReturnType<typeof computeMonthRows>;
 function Index() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     void supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       const id = data.session?.user.id ?? null;
-      if (id) setUserId(id);
+      if (id) { setCreatedAt(data.session?.user.created_at ?? null); setUserId(id); }
       else void navigate({ to: "/login", replace: true });
     });
     return () => {
@@ -282,10 +283,10 @@ function Index() {
   }, []);
 
   if (!userId) return <LoadingScreen />;
-  return <IndexForUser key={userId} userId={userId} />;
+  return <IndexForUser key={userId} userId={userId} createdAt={createdAt} />;
 }
 
-function IndexForUser({ userId }: { userId: string }) {
+function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string | null }) {
   const today = new Date();
   const tableRef = useRef<HTMLElement>(null);
   const tableHeaderRef = useRef<HTMLDivElement>(null);
@@ -336,7 +337,9 @@ function IndexForUser({ userId }: { userId: string }) {
   }, [view]);
 
   const [horizonStart, setHorizonStart] = useState({ y: today.getFullYear(), m: today.getMonth() });
-  const canGoBack = cursor.y * 12 + cursor.m > today.getFullYear() * 12 + today.getMonth();
+    const calendarLimit = accountCalendarLimit(createdAt);
+  const calendarFloor = calendarLimit ?? { y: today.getFullYear(), m: today.getMonth() };
+  const canGoBack = cursor.y * 12 + cursor.m > calendarFloor.y * 12 + calendarFloor.m;
   const calendarSwipeRef = useCalendarSwipe(shiftMonth, canGoBack, loaded && view === "saldos" && !adding);
 
   const [forecastItems, setForecastItems] = useState<ForecastItem[]>([]);
@@ -569,8 +572,8 @@ function IndexForUser({ userId }: { userId: string }) {
     [entries, recurrences, cursor],
   );
 
-  const prevCursor = shiftCalendarMonth(cursor, -1);
-  const nextCursor = shiftCalendarMonth(cursor, 1);
+  const prevCursor = shiftCalendarMonth(cursor, -1, new Date(), calendarLimit);
+  const nextCursor = shiftCalendarMonth(cursor, 1, new Date(), calendarLimit);
   const prevRows = useMemo(
     () => computeMonthRows(entries, recurrences, prevCursor.y, prevCursor.m),
     [entries, recurrences, prevCursor.y, prevCursor.m],
@@ -731,7 +734,7 @@ function IndexForUser({ userId }: { userId: string }) {
     setSelectedDay(null);
     resetForm();
     setAdding(false);
-    setCursor((c) => shiftCalendarMonth(c, delta));
+    setCursor((c) => shiftCalendarMonth(c, delta, new Date(), calendarLimit));
   }
 
   function goToday() {
