@@ -1964,7 +1964,7 @@ function IndexForUser({ userId }: { userId: string }) {
 const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMode === "edit") && (windowDayItems.length > 0 || horizonDayItems.length > 0 || fromHorizonList || !!activeItemKey) && !cameFromPick;
           return (
           <AddWindow
-            hideClose={showBackBtn || ((windowMode === "add" || windowMode === "info") && cameFromPick)}
+                        hideClose={showBackBtn || ((windowMode === "add" || windowMode === "info") && cameFromPick) || (view === "horizonte" && windowMode === "pick" && horizonDayItems.length > 0)}
             headerAction={
              (windowMode === "add" || windowMode === "info") && (cameFromPick || fromHorizonList) ? (
           <Button
@@ -2003,6 +2003,23 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                  >
                    <span className="w-4 shrink-0 text-center">＋</span>
                    <span>adicionar</span>
+                 </Button>
+                            ) : view === "horizonte" && windowMode === "pick" && horizonDayItems.length > 0 ? (
+                 <Button
+                  type="button"
+                  onClick={() => {
+                    setWindowKind("economias");
+                    setFormOrigin("horizon");
+                    setCameFromPick(false);
+                    setFromHorizonList(false);
+                    setWindowMode("horizon");
+                  }}
+                  aria-label="voltar"
+                  title="voltar"
+                  className="h-9 shrink-0 gap-1 rounded-full bg-primary px-3 text-xs font-bold text-primary-foreground shadow hover:bg-primary/90"
+                 >
+                   <span aria-hidden className="w-4 shrink-0 text-center">‹</span>
+                   <span>voltar</span>
                  </Button>
               ) : showBackBtn ? (
                  <Button
