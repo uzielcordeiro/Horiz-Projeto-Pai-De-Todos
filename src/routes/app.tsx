@@ -2255,7 +2255,7 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                 )}
                 {windowKind === "diarios" && (() => {
                   const fr = recurrences.find((r) => r.id === FORECAST_ID);
-                  if (!fr) return null;
+                  if (!fr) return view === "horizonte" ? <p className="text-sm font-semibold text-foreground">Sem gasto diário. Defina na aba Dia/Dia.</p> : null;
                   const edit = fr.dayEdits?.[formDate];
                   const dayValue =
                     windowDayRow?.items.find((it) => it.recurrenceId === FORECAST_ID)?.amount ?? 0;
