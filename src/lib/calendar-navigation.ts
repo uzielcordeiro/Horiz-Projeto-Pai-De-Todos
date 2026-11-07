@@ -1,28 +1,41 @@
 export type CalendarMonth = { y: number; m: number };
 
 /** Navigation starts at the live current month, including across year boundaries. */
-export function shiftCalendarMonth(month: CalendarMonth, delta: number, now = new Date()): CalendarMonth {
+export function shiftCalendarMonth(month: CalendarMonth, delta: number, now = new Date(), limit?: CalendarMonth): CalendarMonth {
   const target = new Date(month.y, month.m + delta, 1);
-  const floor = new Date(now.getFullYear(), now.getMonth(), 1);
+  const current = new Date(now.getFullYear(), now.getMonth(), 1);
+  const requested = limit ? new Date(limit.y, limit.m, 1) : current;
+  const floor = requested < current ? requested : current;
   const date = target < floor ? floor : target;
   return { y: date.getFullYear(), m: date.getMonth() };
 }
 
 /** Horizonte ends at the live current month plus ten years, inclusive. */
-export function shiftHorizonMonth(month: CalendarMonth, delta: number, now = new Date()): CalendarMonth {
-  const target = shiftCalendarMonth(month, delta, now);
+export function shiftHorizonMonth(month: CalendarMonth, delta: number, now = new Date(), limit?: CalendarMonth): CalendarMonth {
+   const target = shiftCalendarMonth(month, delta, now, limit);
   const ceiling = { y: now.getFullYear() + 10, m: now.getMonth() };
   return target.y * 12 + target.m > ceiling.y * 12 + ceiling.m ? ceiling : target;
 }
 
-export function horizonMonthRange(start: CalendarMonth, now = new Date()): CalendarMonth[] {
-  const first = shiftHorizonMonth(start, 0, now);
+export function horizonMonthRange(start: CalendarMonth, now = new Date(), limit?: CalendarMonth): CalendarMonth[] {
+  const first = shiftHorizonMonth(start, 0, now, limit);
   const last = (now.getFullYear() + 10) * 12 + now.getMonth();
   const count = last - (first.y * 12 + first.m) + 1;
   return Array.from({ length: count }, (_, offset) => {
     const date = new Date(first.y, first.m + offset, 1);
     return { y: date.getFullYear(), m: date.getMonth() };
   });
+}
+
+/** First month a client can go back to: 12 months before the month the account was created (local time), never after the current month. */
+export function accountCalendarLimit(createdAt: string | null | undefined, now = new Date()): CalendarMonth | undefined {
+  if (!createdAt) return undefined;
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return undefined;
+  const limit = new Date(created.getFullYear(), created.getMonth() - 12, 1);
+  const current = new Date(now.getFullYear(), now.getMonth(), 1);
+  const date = limit > current ? current : limit;
+  return { y: date.getFullYear(), m: date.getMonth() };
 }
 
 export function calendarGestureDirection(dx: number, dy: number): -1 | 0 | 1 {
