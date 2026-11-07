@@ -1969,7 +1969,7 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
              (windowMode === "add" || windowMode === "info") && (cameFromPick || fromHorizonList) ? (
           <Button
             type="button"
-            onClick={() => fromHorizonList ? setWindowMode("horizon") : setWindowMode("pick")}
+                   onClick={() => { setWindowMode(fromHorizonList ? "horizon" : "pick"); setFromHorizonList(false); }}
                   aria-label="voltar"
                   title="voltar"
                   className="h-9 shrink-0 gap-1 rounded-full bg-primary px-3 text-xs font-bold text-primary-foreground shadow hover:bg-primary/90"
