@@ -101,7 +101,7 @@ const MonthColumn = memo(function MonthColumn({ mo, maxDays, todayIso, highlight
       <button
         type="button"
         onClick={() => onPick(mo.y, mo.m, 1)}
-        className="sticky top-0 z-10 relative block w-full border-b border-border bg-secondary px-3 py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+       className="sticky top-0 z-30 relative block w-full border-b border-border bg-secondary px-3 py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-accent"
       >
         {mo.label}
         {!last && <ColumnTick />}
