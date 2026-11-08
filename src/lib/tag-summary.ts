@@ -30,8 +30,8 @@ export function summarizeTags(entries: TaggedEntry[], recurrences: Recurrence[],
     const occurrences = occurrencesUntil(recurrence, recurrence.installments != null ? "9999-12-31" : untilEnd);
     if (!occurrences.length) continue;
     push(recurrence.tags, occurrences.reduce((sum, item) => cents(sum + item.amount), 0), occurrences.length, recurrence.kind, {
-      date: recurrence.startDate,
-      installments: recurrence.installments,
+     date: occurrences[0]!.date,
+    installments: recurrence.installments != null ? occurrences.length : recurrence.endDate ? occurrencesUntil(recurrence, "9999-12-31").length : null,
       recurring: true,
     });
   }
