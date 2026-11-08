@@ -651,7 +651,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
   const horizonMonths = useMemo<HorizonMonth[]>(() => {
     const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-    const range = horizonMonthRange(horizonStart);
+    const range = horizonMonthRange(horizonStart, new Date(), calendarLimit);
     if (range.length === 0) return [];
     const first = iso(range[0]!.y, range[0]!.m, 1);
 
@@ -727,7 +727,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     }
     
     return out;
-  }, [entries, recurrences, horizonStart]);
+  }, [entries, recurrences, horizonStart, createdAt]);
   const closingStatus = statusOf(rows.closing);
 
   function shiftMonth(delta: number) {
@@ -1729,7 +1729,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
                 setHorizonStart({ y: now.getFullYear(), m: now.getMonth() });
               }}
               onShift={(delta) =>
-                setHorizonStart((h) => shiftHorizonMonth(h, delta))
+              setHorizonStart((h) => shiftHorizonMonth(h, delta, new Date(), calendarLimit))
               }
               onPick={(y, m, day) => {
                 setHorizonHighlight(null);
