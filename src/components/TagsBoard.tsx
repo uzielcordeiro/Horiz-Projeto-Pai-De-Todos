@@ -1,5 +1,6 @@
 import { FitMoney } from "@/components/FitMoney";
 import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 
 import { AddWindow } from "@/components/AddWindow";
 import { SectionBadge } from "@/components/SectionBadge";
@@ -61,14 +62,12 @@ export function TagsBoard({
     <section className="mx-auto w-full max-w-3xl space-y-4">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <label className="flex min-w-0 items-center gap-2">
-          <span aria-hidden className="text-muted-foreground">
-            ⌕
-          </span>
+         <Search aria-hidden size={18} className="shrink-0 text-muted-foreground" />
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="filtrar tags"
-            className="h-10 w-full min-w-0 rounded-xl border border-transparent bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
+           className="h-10 w-full min-w-0 rounded-2xl border border-border bg-card px-4 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
           />
         </label>
         <Button
