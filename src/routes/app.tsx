@@ -179,6 +179,21 @@ type DayItem = {
 
 type Freq = "unico" | "diario" | "mensal" | "semanal";
 
+/** Posição real de cada parcela de uma série: conta só as que existem (sem as apagadas e sem as depois da data final). Série sem fim e sem data final fica de fora. */
+const seriesPositionCache = new WeakMap<Recurrence, Map<string, { index: number; total: number }> | null>();
+
+function realSeriesPositions(rec: Recurrence): Map<string, { index: number; total: number }> | null {
+  if (seriesPositionCache.has(rec)) return seriesPositionCache.get(rec) ?? null;
+  let positions: Map<string, { index: number; total: number }> | null = null;
+  if (rec.installments != null || rec.endDate) {
+    const all = occurrencesUntil(rec, "9999-12-31");
+    positions = new Map<string, { index: number; total: number }>();
+    all.forEach((o, i) => positions!.set(o.date, { index: i + 1, total: all.length }));
+  }
+  seriesPositionCache.set(rec, positions);
+  return positions;
+}
+
 /** Linhas da tabela de saldos de um mês qualquer (usado pelos 3 painéis do carrossel). */
 function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number, m: number) {
   const daysInMonth = new Date(y, m + 1, 0).getDate();
@@ -195,7 +210,8 @@ function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number
   for (const r of recurrences) {
     for (const o of occurrencesInMonth(r, y, m)) {
       const list = byDate.get(o.date) ?? [];
-      list.push(o);
+      const real = realSeriesPositions(r)?.get(o.date);
+      list.push(real ? { ...o, index: real.index, total: real.total } : o);
       byDate.set(o.date, list);
     }
   }
