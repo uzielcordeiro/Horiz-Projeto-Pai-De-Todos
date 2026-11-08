@@ -7,6 +7,20 @@ export type TagDetail = { date: string; installments: number | null; recurring: 
 export type TagRow = { tag: string; total: number; count: number; kinds: SectionKind[]; details: TagDetail[] };
 type TaggedEntry = { date: string; amount: number; kind: SectionKind; tags?: string[] };
 
+export type TagSectionRows = { kind: SectionKind; rows: TagRow[] };
+
+/** Same rules and numbers as summarizeTags, but one list of tags per section (each tag carries only that section's value). */
+export function summarizeTagsBySection(entries: TaggedEntry[], recurrences: Recurrence[], untilEnd: string): TagSectionRows[] {
+  return SECTION_KINDS.map((kind) => ({
+    kind,
+    rows: summarizeTags(
+      entries.filter((entry) => entry.kind === kind),
+      recurrences.filter((recurrence) => recurrence.kind === kind),
+      untilEnd,
+    ),
+  }));
+}
+
 /** Keep totals across occurrences, but describe each source once rather than each installment. */
 export function summarizeTags(entries: TaggedEntry[], recurrences: Recurrence[], untilEnd: string): TagRow[] {
   const map = new Map<string, { total: number; count: number; kinds: Set<SectionKind>; details: TagDetail[] }>();
