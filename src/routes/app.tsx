@@ -23,6 +23,7 @@ import { monthItemLabel } from "@/lib/month-item-label";
 import { CalendarItemLabel } from "@/components/CalendarItemLabel";
 import { HorizonDayList } from "@/components/HorizonDayList";
 import { accountCalendarLimit, horizonMonthRange, shiftCalendarMonth, shiftHorizonMonth } from "@/lib/calendar-navigation";
+import { userKey } from "@/lib/user-storage";
 import { useCalendarSwipe } from "@/hooks/use-calendar-swipe";
 
 import { DailyForecastBoard, type ForecastItem } from "@/components/DailyForecastBoard";
@@ -338,8 +339,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   
   const [cursor, setCursor] = useState(() => {
     if (typeof window !== "undefined") {
-      const savedY = localStorage.getItem("horiz_cursor_y");
-      const savedM = localStorage.getItem("horiz_cursor_m");
+     const savedY = localStorage.getItem(userKey(userId, "horiz_cursor_y"));
+     const savedM = localStorage.getItem(userKey(userId, "horiz_cursor_m"));
       if (savedY && savedM) return { y: Number(savedY), m: Number(savedM) };
     }
     return { y: today.getFullYear(), m: today.getMonth() };
@@ -347,8 +348,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("horiz_cursor_y", String(cursor.y));
-      localStorage.setItem("horiz_cursor_m", String(cursor.m));
+     localStorage.setItem(userKey(userId, "horiz_cursor_y"), String(cursor.y));
+     localStorage.setItem(userKey(userId, "horiz_cursor_m"), String(cursor.m));
     }
   }, [cursor]);
 
@@ -365,7 +366,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
   const [view, setView] = useState<"perfil" | "saldos" | "horizonte" | "totais" | "tags" | "menu" | "diario">(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("horiz_active_view");
+      const saved = localStorage.getItem(userKey(userId, "horiz_active_view"));
       if (saved) return saved as any;
     }
     return "saldos";
@@ -373,7 +374,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("horiz_active_view", view);
+     localStorage.setItem(userKey(userId, "horiz_active_view"), view);
     }
   }, [view]);
 
