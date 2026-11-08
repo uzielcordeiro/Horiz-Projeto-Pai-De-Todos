@@ -194,6 +194,31 @@ function realSeriesPositions(rec: Recurrence): Map<string, { index: number; tota
   return positions;
 }
 
+/** Quantas parcelas reais a série tem (sem as apagadas e sem as depois da data final). Série sem fim e sem data final: null. */
+function realSeriesCount(rec: Recurrence): number | null {
+  if (rec.installments == null && !rec.endDate) return null;
+  return occurrencesUntil(rec, "9999-12-31").length;
+}
+
+/** Ajuste da série para ela ter exatamente `wanted` parcelas reais. Devolve null se a série não comporta esse número. */
+function seriesSettingsForCount(rec: Recurrence, wanted: number): { installments: number; endDate: string | null } | null {
+  const real = realSeriesCount(rec);
+  if (real != null && wanted === real && rec.installments != null) {
+    return { installments: rec.installments, endDate: rec.endDate ?? null };
+  }
+  const slots = occurrencesUntil({ ...rec, skipped: [], endDate: null, installments: wanted + rec.skipped.length }, "9999-12-31");
+  let seen = 0;
+  for (let i = 0; i < slots.length; i++) {
+    if (!rec.skipped.includes(slots[i]!.date)) {
+      seen += 1;
+      if (seen === wanted) {
+        return { installments: i + 1, endDate: real != null && wanted <= real ? rec.endDate ?? null : null };
+      }
+    }
+  }
+  return null;
+}
+
 /** Linhas da tabela de saldos de um mês qualquer (usado pelos 3 painéis do carrossel). */
 function computeMonthRows(entries: Entry[], recurrences: Recurrence[], y: number, m: number) {
   const daysInMonth = new Date(y, m + 1, 0).getDate();
@@ -998,9 +1023,15 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       setFormDate(r.startDate);
       setFreq(r.freq === "monthly" ? "mensal" : r.freq === "weekly" ? "semanal" : "diario");
       setInfinite(r.installments == null);
-      setInstallments(r.freq === "weekly"
-        ? r.installments == null ? "" : String(Math.min(r.installments, weeklyRepetitionLimit(r.startDate)))
-        : r.installments == null ? "" : String(r.installments));
+       setInstallments(
+        r.installments == null
+          ? ""
+          : r.freq === "daily"
+            ? String(r.installments)
+            : r.freq === "weekly"
+              ? String(Math.min(realSeriesCount(r) ?? r.installments, weeklyRepetitionLimit(r.startDate)))
+              : String(realSeriesCount(r) ?? r.installments),
+      );
       setDaysOfMonth(r.daysOfMonth ?? []);
       setEditTarget({ type: "rec", id: r.id });
       setActiveItemKey(item.key);
@@ -1108,6 +1139,16 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
         freq === "mensal" ? "monthly" : freq === "semanal" ? "weekly" : "daily";
       setError(null);
 
+     const editedRec = editTarget.type === "rec" ? recurrences.find((x) => x.id === editTarget.id) : undefined;
+      const countFix =
+        editedRec && isRec && parcelas != null && freq !== "diario" && editedRec.freq === mappedFreq
+          ? seriesSettingsForCount(editedRec, parcelas)
+          : undefined;
+      if (countFix === null) {
+        setError("Esta série não comporta essa quantidade de parcelas.");
+        return;
+      }
+
       if (editTarget.type === "entry") {
         const original = entries.find((entry) => entry.id === editTarget.id);
         if (!original) return;
@@ -1162,7 +1203,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
                   freq: mappedFreq,
                   daysOfMonth: dom,
                   daysOfWeek: dow,
-                  installments: parcelas,
+                  installments: countFix?.installments ?? parcelas,
+                  ...(countFix ? { endDate: countFix.endDate } : {}),
                   weeklyWithinStartMonth: freq === "semanal",
                   tags: cleanTags,
                 }
