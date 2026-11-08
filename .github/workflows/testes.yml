@@ -1,0 +1,32 @@
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v6
+
+      - name: Preparar o Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Preparar o Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Instalar os pacotes
+        run: bun install --frozen-lockfile
+
+      - name: Rodar as provas
+        run: bun run test
