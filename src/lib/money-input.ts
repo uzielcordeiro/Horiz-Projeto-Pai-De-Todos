@@ -1,3 +1,6 @@
+/** Teto do valor digitado: 13 dígitos inteiros (até R$ 9.999.999.999.999,99). */
+export const MAX_INT_DIGITS = 13;
+
 /**
  * Formata o que é digitado num campo de valor no padrão brasileiro:
  * ponto separa milhares, vírgula separa centavos (máx. 2 casas).
@@ -12,15 +15,20 @@ export function formatMoneyInput(raw: string): string {
     const afterComma = clean.slice(commaIdx + 1).replace(/,/g, "");
     if (afterComma.length > 2) {
       const onlyNumbers = clean.replace(/,/g, "");
-      // Reposiciona a vírgula para garantir que fiquem sempre 2 casas no final
-      clean = onlyNumbers.slice(0, -2) + "," + onlyNumbers.slice(-2);
+      // Passou do teto de dígitos inteiros: o dígito extra é ignorado
+      if (onlyNumbers.replace(/^0+(?=\d)/, "").length - 2 > MAX_INT_DIGITS) {
+        clean = clean.slice(0, commaIdx + 1 + 2);
+      } else {
+        // Reposiciona a vírgula para garantir que fiquem sempre 2 casas no final
+        clean = onlyNumbers.slice(0, -2) + "," + onlyNumbers.slice(-2);
+      }
     }
   }
 
   const newCommaIdx = clean.indexOf(",");
   const intRaw = newCommaIdx === -1 ? clean : clean.slice(0, newCommaIdx);
   const decRaw = newCommaIdx === -1 ? null : clean.slice(newCommaIdx + 1).replace(/,/g, "").slice(0, 2);
-  const intDigits = intRaw.replace(/^0+(?=\d)/, "");
+  const intDigits = intRaw.replace(/^0+(?=\d)/, "").slice(0, MAX_INT_DIGITS);
   const intFmt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   
   if (decRaw === null) return intFmt;
