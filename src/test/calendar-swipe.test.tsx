@@ -30,7 +30,7 @@ describe("Suivi contínuo do calendário", () => {
     expect(element.style.transform).toBe("translateX(40px)");
     expect(onShift).not.toHaveBeenCalled();
   });
-  it("acompanha o trackpad imediatamente e troca um único mês quando o gesto termina", async () => {
+    it("acompanha o trackpad imediatamente e troca um único mês ao passar do limite", async () => {
     vi.useFakeTimers();
     const onShift = vi.fn();
     const { getByTestId } = render(<Calendar onShift={onShift} />);
@@ -39,8 +39,8 @@ describe("Suivi contínuo do calendário", () => {
     fireEvent.wheel(element, { deltaX: -40, deltaY: 0 });
     expect(element.style.transform).toBe("translateX(40px)");
     fireEvent.wheel(element, { deltaX: -50, deltaY: 0 });
-    expect(element.style.transform).toBe("translateX(90px)");
-    expect(onShift).not.toHaveBeenCalled();
+    expect(onShift).toHaveBeenCalledExactlyOnceWith(-1);
+    expect(element.style.transform).toBe("");
     await act(async () => { await vi.advanceTimersByTimeAsync(80); });
     expect(onShift).toHaveBeenCalledExactlyOnceWith(-1);
     expect(element.style.transform).toBe("");
