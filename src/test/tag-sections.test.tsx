@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SectionBadge, type SectionKind } from "@/components/SectionBadge";
 import { TagsBoard } from "@/components/TagsBoard";
-import { summarizeTags } from "@/lib/tag-summary";
+import { summarizeTags, summarizeTagsBySection } from "@/lib/tag-summary";
 import type { Recurrence } from "@/lib/recurrence";
 
 afterEach(cleanup);
@@ -11,7 +11,7 @@ describe("Tag section identifiers", () => {
   it.each([
     ["entradas", "entradas", "E", "bg-positive"],
     ["saidas", "saídas", "S", "bg-negative"],
-    ["diarios", "diários", "D", "bg-chart-4"],
+    ["diarios", "Dia/Dia", "D", "bg-chart-4"],
     ["economias", "poupança", "P", "bg-category-savings"],
     ["cartao", "cartão", "C", "bg-chart-1"],
   ])("matches the calendar badge for %s", (kind, title, letter, tone) => {
@@ -21,20 +21,23 @@ describe("Tag section identifiers", () => {
     expect(badge).toHaveClass(tone);
   });
 
-  it("shows every source section on a shared tag and preserves filtering and editing", () => {
+     it("shows a shared tag in each of its sections and preserves filtering and editing", () => {
     render(<TagsBoard rows={[
-      { tag: "fixo", total: 300, count: 2, kinds: ["entradas", "saidas"], details: [{ date: "2026-10-11", installments: 12, recurring: true }] },
+      { tag: "fixo", total: 1200, count: 12, kinds: ["entradas"], details: [{ date: "2026-10-11", installments: 12, recurring: true }] },
+      { tag: "fixo", total: 50, count: 1, kinds: ["saidas"], details: [{ date: "2026-10-12", installments: null, recurring: false }] },
       { tag: "reserva", total: 50, count: 1, kinds: ["economias"], details: [{ date: "2026-10-12", installments: null, recurring: false }] },
     ]} onAdd={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />);
-    const row = screen.getByRole("button", { name: "editar tag fixo" });
-    expect(within(row).getByRole("img", { name: "entradas" })).toHaveTextContent("E");
-    expect(within(row).getByRole("img", { name: "saídas" })).toHaveTextContent("S");
-    expect(row).toHaveTextContent("Dia 11/Out");
-    expect(row).toHaveTextContent("1/12 lançamentos");
+    const rows = screen.getAllByRole("button", { name: "editar tag fixo" });
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByRole("img", { name: "entradas" })).toHaveTextContent("E");
+    expect(rows[0]).toHaveTextContent("Dia 11/Out");
+    expect(rows[0]).toHaveTextContent("1/12 lançamentos");
+    expect(within(rows[1]!).getByRole("img", { name: "saídas" })).toHaveTextContent("S");
+    expect(rows[1]).toHaveTextContent("Dia 12/Out · não repete");
     expect(screen.getByRole("button", { name: "editar tag reserva" })).toHaveTextContent("Dia 12/Out · não repete");
     fireEvent.change(screen.getByPlaceholderText("filtrar tags"), { target: { value: "fixo" } });
     expect(screen.queryByRole("button", { name: "editar tag reserva" })).not.toBeInTheDocument();
-    fireEvent.click(row);
+    fireEvent.click(screen.getAllByRole("button", { name: "editar tag fixo" })[0]!);
     expect(screen.getByPlaceholderText("nome da tag")).toHaveValue("fixo");
   });
 
@@ -54,14 +57,16 @@ describe("Tag section identifiers", () => {
       id: "plan", kind: "cartao", name: "Compra", label: "", tags: ["casa"], amount: 10,
       freq: "monthly", daysOfMonth: [15], daysOfWeek: [], startDate: "2026-10-15", installments: 6, skipped: [],
     };
-    const rows = summarizeTags([{ date: "2026-10-11", amount: 20, kind: "saidas", tags: ["casa", "casa"] }], [recurrence], "2026-10-31");
-    expect(rows[0]?.total).toBe(80);
-    expect(rows[0]?.details).toHaveLength(2);
+        const rows = summarizeTagsBySection([{ date: "2026-10-11", amount: 20, kind: "saidas", tags: ["casa", "casa"] }], [recurrence], "2026-10-31").flatMap((section) => section.rows);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.total).toBe(20);
+    expect(rows[1]?.total).toBe(60);
     render(<TagsBoard rows={rows} onAdd={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />);
-    const row = screen.getByRole("button", { name: "editar tag casa" });
-    expect(row).toHaveTextContent("Dia 11/Out · não repete");
-    expect(row).toHaveTextContent("Dia 15/Out · 1/6 lançamentos");
-  });
+    const casaRows = screen.getAllByRole("button", { name: "editar tag casa" });
+    expect(casaRows).toHaveLength(2);
+    expect(casaRows[0]).toHaveTextContent("Dia 11/Out · não repete");
+    expect(casaRows[1]).toHaveTextContent("Dia 15/Out · 1/6 lançamentos");
+    });
 
   it("uses the requested label whenever no installment count is set", () => {
     render(<TagsBoard rows={[{ tag: "fixo", total: 100, count: 1, kinds: ["entradas"], details: [{ date: "2026-10-11", installments: null, recurring: true }] }]} onAdd={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />);
