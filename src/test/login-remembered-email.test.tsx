@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginPage } from "@/routes/login";
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
-vi.mock("@/lib/billing.functions", () => ({ createCheckout: vi.fn() }));
+vi.mock("@/lib/billing.functions", () => ({ createCheckout: vi.fn(), getCheckoutSessionEmail: vi.fn(), activatePendingSubscription: vi.fn() }));
 
 const { navigate, signInWithPassword } = vi.hoisted(() => ({
   navigate: vi.fn(),
