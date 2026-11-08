@@ -15,7 +15,7 @@ import { MonthCalendar } from "@/components/MonthCalendar";
 import { HorizonBoard, type HorizonDay, type HorizonMonth } from "@/components/HorizonBoard";
 import { TotalsBoard } from "@/components/TotalsBoard";
 import { TagsBoard, type TagRow } from "@/components/TagsBoard";
-import { summarizeTags } from "@/lib/tag-summary";
+import { summarizeTagsBySection } from "@/lib/tag-summary";
 import { SectionBadge, SECTION_KINDS, type SectionKind } from "@/components/SectionBadge";
 import { forecastBudgets } from "@/lib/forecast";
 import { cents } from "@/lib/money-format";
@@ -662,7 +662,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
   const tagRows = useMemo<TagRow[]>(() => {
     const untilEnd = iso(cursor.y, cursor.m, new Date(cursor.y, cursor.m + 1, 0).getDate());
-    return summarizeTags(entries, recurrences, untilEnd);
+    return summarizeTagsBySection(entries, recurrences, untilEnd).flatMap((section) => section.rows);
   }, [entries, recurrences, cursor]);
 
   function renameTag(oldTag: string, newTag: string) {
