@@ -3,12 +3,22 @@ import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
 import { AddWindow } from "@/components/AddWindow";
-import { SectionBadge } from "@/components/SectionBadge";
+import { SectionBadge, SECTION_KINDS, type SectionKind } from "@/components/SectionBadge";
 import { Button } from "@/components/ui/button";
 import type { TagRow } from "@/lib/tag-summary";
 export type { TagRow } from "@/lib/tag-summary";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const SECTION_TITLES: Record<SectionKind, string> = {
+  entradas: "entradas",
+  saidas: "saídas",
+  diarios: "Dia/Dia",
+  economias: "poupança",
+  cartao: "cartão",
+};
+
+const plain = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export function TagsBoard({
   rows,
@@ -26,10 +36,14 @@ export function TagsBoard({
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const list = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    const filtered = q ? rows.filter((r) => r.tag.toLowerCase().includes(q)) : rows;
-    return [...filtered].sort((a, b) => b.total - a.total);
+ const groups = useMemo(() => {
+    const q = plain(filter.trim());
+    return SECTION_KINDS.map((kind) => {
+      const inKind = rows.filter((r) => r.kinds.includes(kind));
+      const sectionHit = q !== "" && plain(SECTION_TITLES[kind]).includes(q);
+      const shown = q === "" || sectionHit ? inKind : inKind.filter((r) => plain(r.tag).includes(q));
+      return { kind, rows: [...shown].sort((a, b) => b.total - a.total) };
+    }).filter((group) => group.rows.length > 0);
   }, [rows, filter]);
 
   useEffect(() => {
@@ -82,7 +96,7 @@ export function TagsBoard({
         </Button>
       </div>
 
-      {list.length === 0 ? (
+        {groups.length === 0 ? (
         <div className="grid place-items-center gap-6 rounded-2xl border border-border bg-card px-6 py-16 text-center">
           <span className="grid size-20 place-items-center rounded-full border border-border text-2xl text-muted-foreground">
             ⊕
@@ -94,9 +108,16 @@ export function TagsBoard({
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="divide-y divide-border">
-            {list.map((r) => (
+             <div className="space-y-4">
+          {groups.map((group) => (
+            <section key={group.kind}>
+              <div className="mb-2 flex items-center gap-2 px-1">
+              <SectionBadge kind={group.kind} compact />
+                <span className="text-sm text-muted-foreground">{SECTION_TITLES[group.kind]}</span>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                <div className="divide-y divide-border">
+                  {group.rows.map((r) => (
                <Button
                  variant="ghost"
                 key={r.tag}
@@ -126,8 +147,11 @@ export function TagsBoard({
                   <FitMoney value={r.total} />
                 </span>
                </Button>
-            ))}
-          </div>
+                     ))}
+                </div>
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
