@@ -50,3 +50,46 @@ export function moneyGhostSuffix(value: string): string {
   if (i === -1) return ",00";
   return "0".repeat(Math.max(0, 2 - (value.length - i - 1)));
 }
+
+/**
+ * Resultado de uma tecla digitada: o texto do campo e uma "memória" que diz se
+ * a vírgula atual veio de um ponto digitado (ex.: 2.5). A memória serve para,
+ * na 3ª casa (ex.: 1.000), saber que aquele ponto era de milhar.
+ */
+export type MoneyTypingResult = { value: string; fromDot: boolean };
+
+/**
+ * Entende o ponto digitado. Recebe o texto de antes (prev), o texto novo (raw)
+ * e a memória. Ponto + 1 ou 2 números = centavos (2.5 -> 2,5); ponto + 3 números
+ * = milhar (1.000). Sem ponto, o resultado é igual ao de formatMoneyInput.
+ */
+export function formatMoneyTyping(prev: string, raw: string, fromDot: boolean): MoneyTypingResult {
+  // 1) Ponto digitado no fim, depois de um número e antes de qualquer vírgula: vira vírgula.
+  if (raw === prev + "." && /\d$/.test(prev) && !prev.includes(",")) {
+    return { value: formatMoneyInput(prev + ","), fromDot: true };
+  }
+
+  // 2) A vírgula veio de um ponto e chegou o 3º número depois dela: o ponto era de milhar.
+  if (
+    fromDot &&
+    raw.startsWith(prev) &&
+    /^\d+,\d\d$/.test(prev.replace(/\./g, "")) &&
+    /^\d$/.test(raw.slice(prev.length))
+  ) {
+    return { value: formatMoneyInput(raw.replace(/\D/g, "")), fromDot: false };
+  }
+
+  // 3) Colar num campo vazio: o último ponto com 1 ou 2 números depois são os centavos.
+  if (prev === "" && raw.length > 1 && !raw.includes(",")) {
+    const text = raw.replace(/\s|R\$/g, "");
+    const i = text.lastIndexOf(".");
+    if (i > 0 && /^\d[\d.]*$/.test(text.slice(0, i)) && /^\d{1,2}$/.test(text.slice(i + 1))) {
+      const reais = text.slice(0, i).replace(/\./g, "");
+      return { value: formatMoneyInput(reais + "," + text.slice(i + 1)), fromDot: false };
+    }
+  }
+
+  // 4) Todo o resto: igual ao que já existe hoje.
+  const value = formatMoneyInput(raw);
+  return { value, fromDot: value.includes(",") ? fromDot : false };
+}
