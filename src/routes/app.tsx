@@ -2,6 +2,8 @@ import { submitOnEnter, submitFormOnEnter } from "@/lib/enter-submit";
 import { FitMoney } from "@/components/FitMoney";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
@@ -407,6 +409,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   const [infinite, setInfinite] = useState(false);
   const [installments, setInstallments] = useState("");
   const installmentsRef = useRef<HTMLInputElement>(null);
+  const saveSeq = useRef(0);
   const [daysOfMonth, setDaysOfMonth] = useState<number[]>([]);
 
   const [history, setHistory] = useState<{ entries: Entry[]; recurrences: Recurrence[] }[]>([]);
@@ -521,6 +524,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     }, [forecastItems, loaded, dayEdits]);
 
   async function commit(nextEntries: Entry[], nextRecurrences: Recurrence[], customForecasts?: ForecastItem[]) {
+    const mySeq = ++saveSeq.current;
+    const before = { entries, recurrences, forecastItems, dayEdits };
     setHistory((h) => [...h.slice(-19), { entries, recurrences }]);
     setEntries(nextEntries);
     setRecurrences(nextRecurrences);
@@ -595,7 +600,17 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     if (nothingToSave) return;
 
     const { error } = await supabase.rpc("salvar_calendario", { p: payload });
-    if (error) console.error("Erro ao salvar o calendário:", error);
+        if (error) {
+      console.error("Erro ao salvar o calendário:", error);
+      const { data: auth } = await supabase.auth.getSession();
+      toast.error(auth.session ? "Erro ao salvar. Tente de novo." : "Sessão expirada. Entre de novo.");
+      if (saveSeq.current === mySeq) {
+        setEntries(before.entries);
+        setRecurrences(before.recurrences);
+        setForecastItems(before.forecastItems);
+        setDayEdits(before.dayEdits);
+      }
+    }
   }
 
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
@@ -1574,7 +1589,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
   return (
     <div className="flex min-h-screen bg-background">
-      <AppSidebar
+      <Toaster position="top-center" />
+       <AppSidebar
         onReset={resetCalendar}
         onAdd={() => {
           resetForm();
