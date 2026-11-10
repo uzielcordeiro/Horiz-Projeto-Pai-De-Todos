@@ -385,6 +385,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   const calendarSwipeRef = useCalendarSwipe(shiftMonth, canGoBack, loaded && view === "saldos" && !adding);
 
   const [forecastItems, setForecastItems] = useState<ForecastItem[]>([]);
+  const [dayEdits, setDayEdits] = useState<Record<string, number | null>>({});
   const [forecastDivisor, setForecastDivisor] = useState(30);
 
   const [kind, setKind] = useState<Kind>("entradas");
@@ -424,11 +425,12 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     async function loadFromSupabase() {
       if (!userId) return;
 
-      const [txRes, recRes, castRes, subRes] = await Promise.all([
+        const [txRes, recRes, castRes, subRes, editsRes] = await Promise.all([
         supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
         supabase.from("recurrences").select("payload").eq("user_id", userId),
         supabase.from("forecasts").select("payload").eq("user_id", userId),
-        supabase.from("subscriptions").select("status").eq("user_id", userId).maybeSingle()
+        supabase.from("subscriptions").select("status").eq("user_id", userId).maybeSingle(),
+        supabase.from("forecast_day_edits").select("edits").eq("user_id", userId).maybeSingle()
       ]);
 
       if (cancelled) return;
@@ -463,6 +465,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
         setForecastItems(castRes.data.map((c) => c.payload as ForecastItem));
       }
 
+      setDayEdits((editsRes.data?.edits as Record<string, number | null> | undefined) ?? {});
       setLoaded(true);
     }
     void loadFromSupabase();
@@ -485,6 +488,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
             ...prev,
             {
               id: FORECAST_ID,
+              dayEdits,
               kind: "diarios",
               name: "previsão gasto diário",
               label: "gasto diário",
@@ -514,7 +518,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       }
       return existing ? prev.filter((r) => r.id !== FORECAST_ID) : prev;
     });
-  }, [forecastItems, loaded]);
+    }, [forecastItems, loaded, dayEdits]);
 
   async function commit(nextEntries: Entry[], nextRecurrences: Recurrence[], customForecasts?: ForecastItem[]) {
     setHistory((h) => [...h.slice(-19), { entries, recurrences }]);
@@ -1481,7 +1485,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   }
 
   function resetCalendar(scope: "month" | "all") {
-    const snapshot = { entries, recurrences, forecastItems, history };
+     const snapshot = { entries, recurrences, forecastItems, history, dayEdits };
     if (scope === "month") {
       void clearMonth();
     } else {
@@ -1492,6 +1496,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       setEntries(snapshot.entries);
       setRecurrences(snapshot.recurrences);
       setForecastItems(snapshot.forecastItems);
+      setDayEdits(snapshot.dayEdits);
       setHistory(snapshot.history);
     };
   }
