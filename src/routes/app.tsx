@@ -1286,7 +1286,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     }
 
     setError(null);
-    await commit(
+    const saved = await commit(
       [
         ...entries,
         {
@@ -1302,6 +1302,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       ],
       recurrences,
     );
+    if (!saved) return;
     resetForm();
     setAdding(false);
     setSelectedDay(null);
