@@ -1257,7 +1257,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       const dom = freq === "mensal" ? [d] : freq === "diario" ? dailyDays : [];
       const dow = freq === "semanal" ? [new Date(y, m, d).getDay()] : [];
       setError(null);
-      await commit(entries, [
+      const savedRec = await commit(entries, [
         ...recurrences,
         {
           id: crypto.randomUUID(),
@@ -1277,6 +1277,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
           horizonTransfer,
         },
       ]);
+      if (!savedRec) return;
       resetForm();
       setAdding(false);
       setSelectedDay(null);
