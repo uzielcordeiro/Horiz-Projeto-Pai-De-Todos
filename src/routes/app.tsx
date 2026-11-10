@@ -524,6 +524,11 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     setHistory((h) => [...h.slice(-19), { entries, recurrences }]);
     setEntries(nextEntries);
     setRecurrences(nextRecurrences);
+    const fakeNext = nextRecurrences.find((r) => r.id === FORECAST_ID);
+    const editsAfter: Record<string, number | null> =
+      customForecasts && customForecasts.length === 0 ? {} : (fakeNext?.dayEdits ?? {});
+    const editsChanged = JSON.stringify(editsAfter) !== JSON.stringify(dayEdits);
+    if (editsChanged) setDayEdits(editsAfter);
     
     if (customForecasts) {
       setForecastItems(customForecasts);
@@ -531,12 +536,12 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
     if (!userId) return;
 
-    // Sincronizar transactions (lançamentos únicos) - DIFF LOGIC
+        // Sincronizar tudo de uma vez pela função do banco (salvar_calendario) - tudo ou nada
     const currentTxIds = new Set(nextEntries.map((e) => e.id));
-    const txToRemove = entries.filter((e) => !currentTxIds.has(e.id)).map(e => e.id);
-    
-    const txUpserts = nextEntries.filter(e => {
-      const old = entries.find(o => o.id === e.id);
+    const tx_delete = entries.filter((e) => !currentTxIds.has(e.id)).map((e) => e.id);
+
+    const tx_upsert = nextEntries.filter((e) => {
+      const old = entries.find((o) => o.id === e.id);
       if (!old) return true; // novo item
       return old.amount !== e.amount || old.label !== e.label || old.date !== e.date || old.kind !== e.kind || JSON.stringify(old.tags) !== JSON.stringify(e.tags) || old.horizonTransfer !== e.horizonTransfer;
     }).map((e) => {
@@ -544,7 +549,6 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       if (e.horizonTransfer && !finalTags.includes("horizon_transfer")) finalTags.push("horizon_transfer");
       return {
         id: e.id,
-        user_id: userId,
         amount: e.amount,
         type: e.kind,
         date: e.date,
@@ -553,62 +557,45 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       };
     });
 
-    if (txToRemove.length > 0) {
-      const { error } = await supabase.from("transactions").delete().eq("user_id", userId).in("id", txToRemove);
-      if (error) console.error("Erro ao deletar transações:", error);
-    }
-    if (txUpserts.length > 0) {
-      const { error } = await supabase.from("transactions").upsert(txUpserts);
-      if (error) console.error("Erro ao upsert transações:", error);
-    }
-
-    // Sincronizar recurrences (recorrências e parcelamentos) - DIFF LOGIC
+    // O Dia/Dia (forecast-auto) nunca vai para a tabela recurrences: os valores dele vão em day_edits
     const currentRecIds = new Set(nextRecurrences.map((r) => r.id));
-    const recToRemove = recurrences.filter((r) => !currentRecIds.has(r.id)).map(r => r.id);
-    
-    const recUpserts = nextRecurrences.filter(r => {
-      const old = recurrences.find(o => o.id === r.id);
-      if (!old) return true;
-      return JSON.stringify(old) !== JSON.stringify(r);
-    }).map((r) => ({
-      id: r.id,
-      user_id: userId,
-      payload: r as unknown as object,
-    }));
+    const rec_delete = recurrences
+      .filter((r) => r.id !== FORECAST_ID && !currentRecIds.has(r.id))
+      .map((r) => r.id);
 
-    if (recToRemove.length > 0) {
-      const { error } = await supabase.from("recurrences").delete().eq("user_id", userId).in("id", recToRemove);
-      if (error) console.error("Erro ao deletar recorrências:", error);
-    }
-    if (recUpserts.length > 0) {
-      const { error } = await supabase.from("recurrences").upsert(recUpserts);
-      if (error) console.error("Erro ao upsert recorrências:", error);
-    }
-    
-    // Sincronizar forecasts se passado no parâmetro - DIFF LOGIC
+    const rec_upsert = nextRecurrences
+      .filter((r) => {
+        if (r.id === FORECAST_ID) return false;
+        const old = recurrences.find((o) => o.id === r.id);
+        if (!old) return true;
+        return JSON.stringify(old) !== JSON.stringify(r);
+      })
+      .map((r) => ({ id: r.id, payload: r as unknown as object }));
+
+    let fc_delete: string[] = [];
+    let fc_upsert: { id: string; payload: object }[] = [];
     if (customForecasts) {
-       const currentCastIds = new Set(customForecasts.map((c) => c.id));
-       const castToRemove = forecastItems.filter((c) => !currentCastIds.has(c.id)).map(c => c.id);
-       
-       const castUpserts = customForecasts.filter(c => {
-         const old = forecastItems.find(o => o.id === c.id);
-         if (!old) return true;
-         return JSON.stringify(old) !== JSON.stringify(c);
-       }).map((c) => ({
-         id: c.id,
-         user_id: userId,
-         payload: c as unknown as object,
-       }));
-
-       if (castToRemove.length > 0) {
-         const { error } = await supabase.from("forecasts").delete().eq("user_id", userId).in("id", castToRemove);
-         if (error) console.error("Erro ao deletar previsões:", error);
-       }
-       if (castUpserts.length > 0) {
-         const { error } = await supabase.from("forecasts").upsert(castUpserts);
-         if (error) console.error("Erro ao upsert previsões:", error);
-       }
+      const currentCastIds = new Set(customForecasts.map((c) => c.id));
+      fc_delete = forecastItems.filter((c) => !currentCastIds.has(c.id)).map((c) => c.id);
+      fc_upsert = customForecasts
+        .filter((c) => {
+          const old = forecastItems.find((o) => o.id === c.id);
+          if (!old) return true;
+          return JSON.stringify(old) !== JSON.stringify(c);
+        })
+        .map((c) => ({ id: c.id, payload: c as unknown as object }));
     }
+
+    const payload: Record<string, unknown> = { tx_delete, tx_upsert, rec_delete, rec_upsert, fc_delete, fc_upsert };
+    if (editsChanged) payload.day_edits = editsAfter;
+
+    const nothingToSave =
+      tx_delete.length + tx_upsert.length + rec_delete.length + rec_upsert.length + fc_delete.length + fc_upsert.length === 0 &&
+      !editsChanged;
+    if (nothingToSave) return;
+
+    const { error } = await supabase.rpc("salvar_calendario", { p: payload });
+    if (error) console.error("Erro ao salvar o calendário:", error);
   }
 
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
