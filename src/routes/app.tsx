@@ -523,7 +523,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     });
     }, [forecastItems, loaded, dayEdits]);
 
-  async function commit(nextEntries: Entry[], nextRecurrences: Recurrence[], customForecasts?: ForecastItem[]) {
+    async function commit(nextEntries: Entry[], nextRecurrences: Recurrence[], customForecasts?: ForecastItem[]): Promise<boolean> {
     const mySeq = ++saveSeq.current;
     const before = { entries, recurrences, forecastItems, dayEdits };
     setHistory((h) => [...h.slice(-19), { entries, recurrences }]);
@@ -539,7 +539,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       setForecastItems(customForecasts);
     }
 
-    if (!userId) return;
+    if (!userId) return true;
 
         // Sincronizar tudo de uma vez pela função do banco (salvar_calendario) - tudo ou nada
     const currentTxIds = new Set(nextEntries.map((e) => e.id));
@@ -597,10 +597,10 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     const nothingToSave =
       tx_delete.length + tx_upsert.length + rec_delete.length + rec_upsert.length + fc_delete.length + fc_upsert.length === 0 &&
       !editsChanged;
-    if (nothingToSave) return;
+    if (nothingToSave) return true;
 
     const { error } = await supabase.rpc("salvar_calendario", { p: payload });
-        if (error) {
+    if (error) {
       console.error("Erro ao salvar o calendário:", error);
       const { data: auth } = await supabase.auth.getSession();
       toast.error(auth.session ? "Erro ao salvar. Tente de novo." : "Sessão expirada. Entre de novo.");
@@ -610,7 +610,9 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
         setForecastItems(before.forecastItems);
         setDayEdits(before.dayEdits);
       }
+      return false;
     }
+    return true;
   }
 
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
