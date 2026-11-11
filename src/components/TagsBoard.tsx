@@ -1,5 +1,5 @@
 import { FitMoney } from "@/components/FitMoney";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
 import { AddWindow } from "@/components/AddWindow";
@@ -28,13 +28,14 @@ export function TagsBoard({
 }: {
   rows: TagRow[];
   onAdd: () => void;
-  onRename: (oldTag: string, newTag: string) => void;
-  onDelete: (tag: string) => void;
+  onRename: (oldTag: string, newTag: string) => void | boolean | Promise<boolean | void>;
+  onDelete: (tag: string) => void | boolean | Promise<boolean | void>;
 }) {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<TagRow | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const savingRef = useRef(false);
 
  const groups = useMemo(() => {
     const q = plain(filter.trim());
@@ -57,8 +58,8 @@ export function TagsBoard({
     setError(null);
   };
 
-  const save = () => {
-    if (!selected) return;
+  const save = async () => {
+    if (!selected || savingRef.current) return;
     const next = name.trim().replace(/^#+/, "");
     if (!next) {
       setError("dê um nome para a tag.");
@@ -68,7 +69,15 @@ export function TagsBoard({
       setError("já existe uma tag com esse nome.");
       return;
     }
-    if (next !== selected.tag) onRename(selected.tag, next);
+    if (next !== selected.tag) {
+      savingRef.current = true;
+      try {
+        const renamed = await onRename(selected.tag, next);
+        if (renamed === false) return;
+      } finally {
+        savingRef.current = false;
+      }
+    }
     close();
   };
 
@@ -165,9 +174,16 @@ export function TagsBoard({
               key: "tag",
               label: "apagar esta tag",
               tone: "negative",
-              onSelect: () => {
-                onDelete(selected.tag);
-                close();
+              onSelect: async () => {
+                if (savingRef.current) return;
+                savingRef.current = true;
+                try {
+                  const deleted = await onDelete(selected.tag);
+                  if (deleted === false) return;
+                  close();
+                } finally {
+                  savingRef.current = false;
+                }
               },
             },
           ]}
