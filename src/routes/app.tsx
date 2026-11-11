@@ -673,7 +673,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     return summarizeTagsBySection(entries, recurrences, untilEnd).flatMap((section) => section.rows);
   }, [entries, recurrences, cursor]);
 
-  function renameTag(oldTag: string, newTag: string) {
+  async function renameTag(oldTag: string, newTag: string): Promise<boolean> {
     const swap = (list: string[]) => {
       const out: string[] = [];
       for (const t of list) {
@@ -686,18 +686,22 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       x.tags?.includes(oldTag) ? { ...x, tags: swap(x.tags) } : x;
     const nextEntries = entries.map(apply);
     const nextRecurrences = recurrences.map(apply);
-    void commit(nextEntries, nextRecurrences);
+    const saved = await commit(nextEntries, nextRecurrences);
+    if (!saved) return false;
     setTags((prev) => swap(prev));
+    return true;
   }
 
-  function deleteTag(tag: string) {
+  async function deleteTag(tag: string): Promise<boolean> {
     const strip = <T extends { tags?: string[] }>(x: T): T =>
       x.tags?.includes(tag) ? { ...x, tags: x.tags.filter((t) => t !== tag) } : x;
     const nextEntries = entries.map(strip);
     const nextRecurrences = recurrences.map(strip);
-    void commit(nextEntries, nextRecurrences);
+    const saved = await commit(nextEntries, nextRecurrences);
+    if (!saved) return false;
     setTags((prev) => prev.filter((t) => t !== tag));
-  }
+    return true;
+    }
 
   const horizonMonths = useMemo<HorizonMonth[]>(() => {
     const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
