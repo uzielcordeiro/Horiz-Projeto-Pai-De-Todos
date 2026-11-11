@@ -29,8 +29,8 @@ export function DailyForecastBoard({
   items: ForecastItem[];
   year: number;
   month: number;
-  onSave: (item: ForecastItem) => void;
-  onDelete: (id: string) => void;
+  onSave: (item: ForecastItem) => void | boolean | Promise<boolean | void>;
+  onDelete: (id: string) => void | boolean | Promise<boolean | void>;
 }) {
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -43,6 +43,7 @@ export function DailyForecastBoard({
   const [weeksInput, setWeeksInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const savingRef = useRef(false);
 
   // Ao abrir pelo botão "adicionar", o campo nome já vem focado e pronto pra digitar.
   useEffect(() => {
@@ -72,22 +73,29 @@ export function DailyForecastBoard({
     setTagInput("");
   }
 
-  function submit() {
+   async function submit() {
+    if (savingRef.current) return;
     const value = Number(amount.replace(/\./g, "").replace(",", "."));
     if (!name.trim()) return setError("dê um nome pro gasto.");
     if (!Number.isFinite(value) || value <= 0) return setError("informe um valor maior que zero.");
     const weeks = period === "semanal" ? parseWeeks(weeksInput) : null;
     if (period === "semanal" && !weeks)
       return setError("semanal: informe quantas semanas (de 1 a 5), ou escolha mensal.");
-    onSave({
-      id: editing?.id ?? crypto.randomUUID(),
-      name: name.trim(),
-      amount: value,
-      period,
-      tags: (() => { const t = tagInput.trim().replace(/^#/, "").toLowerCase(); return t && !tags.includes(t) ? [...tags, t] : tags; })(),
-      ...(weeks ? { weeks } : {}),
-    });
-    setOpen(false);
+    savingRef.current = true;
+    try {
+      const saved = await onSave({
+        id: editing?.id ?? crypto.randomUUID(),
+        name: name.trim(),
+        amount: value,
+        period,
+        tags: (() => { const t = tagInput.trim().replace(/^#/, "").toLowerCase(); return t && !tags.includes(t) ? [...tags, t] : tags; })(),
+        ...(weeks ? { weeks } : {}),
+      });
+      if (saved === false) return;
+      setOpen(false);
+    } finally {
+      savingRef.current = false;
+    }
   }
 
   const field =
@@ -97,7 +105,7 @@ export function DailyForecastBoard({
     <section className="mx-auto w-full max-w-3xl space-y-4">
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <p className="min-w-0 truncate text-sm text-muted-foreground">previsão de gasto diário</p>
+       <p className="min-w-0 truncate text-sm text-muted-foreground">Dia/Dia</p>
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
@@ -210,7 +218,7 @@ export function DailyForecastBoard({
       {open && (
         <AddWindow
           title={editing ? "editar gasto" : "adicionar gasto"}
-          subtitle="previsão gasto diário"
+          subtitle="Dia/Dia"
           onClose={() => setOpen(false)}
           onDeleteItem={editing ? () => onDelete(editing.id) : undefined}
         >
