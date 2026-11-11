@@ -17,7 +17,7 @@ type Props = {
   onDeleteMonth?: (() => void) | undefined;
   deleteDayDisabled?: boolean | undefined;
   deleteMonthDisabled?: boolean | undefined;
-  onDeleteItem?: (() => void) | undefined;
+  onDeleteItem?: (() => void | boolean | Promise<boolean | void>) | undefined;
   hideClose?: boolean;
   children: ReactNode;
 };
@@ -219,9 +219,10 @@ export function AddWindow({
                       disabled={false}
                       confirming={false}
                       tone="negative"
-                      onSelect={() => {
+                      onSelect={async () => {
                         setItemConfirm(false);
-                        onDeleteItem();
+                        const deleted = await onDeleteItem();
+                        if (deleted === false) return;
                         onClose();
                       }}
                     />
