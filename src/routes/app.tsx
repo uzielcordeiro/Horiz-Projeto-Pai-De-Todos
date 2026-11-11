@@ -1832,15 +1832,15 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
             items={forecastItems}
             year={today.getFullYear()}
             month={today.getMonth()}
-            onSave={(item) => {
+            onSave={async (item) => {
               const customForecasts = forecastItems.some((p) => p.id === item.id)
                 ? forecastItems.map((p) => (p.id === item.id ? item : p))
                 : [...forecastItems, item];
-              void commit(entries, recurrences, customForecasts);
+              return await commit(entries, recurrences, customForecasts);
             }}
-            onDelete={(id) => {
+            onDelete={async (id) => {
                const customForecasts = forecastItems.filter((p) => p.id !== id);
-               void commit(entries, recurrences, customForecasts);
+               return await commit(entries, recurrences, customForecasts);
             }}
           />
         ) : view === "tags" ? (
