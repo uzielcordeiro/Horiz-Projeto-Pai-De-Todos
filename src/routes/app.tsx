@@ -1334,22 +1334,22 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     );
   }
 
-  async function removeEntry(id: string) {
-    await commit(
+    async function removeEntry(id: string) {
+    return await commit(
       entries.filter((e) => e.id !== id),
       recurrences,
     );
   }
 
   async function updateEntryAmount(id: string, value: number) {
-    await commit(
+    return await commit(
       entries.map((e) => (e.id === id ? { ...e, amount: value } : e)),
       recurrences,
     );
   }
 
   async function updateRecurrenceAmount(recurrenceId: string, value: number) {
-    await commit(
+    return await commit(
       entries,
       recurrences.map((r) => (r.id === recurrenceId ? { ...r, amount: value } : r)),
     );
@@ -1387,8 +1387,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     );
   }
 
-  async function removeRecurrence(recurrenceId: string) {
-    await commit(
+   async function removeRecurrence(recurrenceId: string) {
+    return await commit(
       entries,
       recurrences.filter((r) => r.id !== recurrenceId),
       recurrenceId === FORECAST_ID ? [] : undefined
@@ -1427,18 +1427,18 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       setHorizonJump({ ...horizonJump, ask: null, error: "Informe um valor válido." });
       return;
     }
-    const remove = value === 0;
+       const remove = value === 0;
+    let savedJump = true;
     if (item.entryId) {
-      if (remove) await removeEntry(item.entryId);
-      else await updateEntryAmount(item.entryId, value);
+      if (remove) savedJump = await removeEntry(item.entryId);
+      else savedJump = await updateEntryAmount(item.entryId, value);
     } else if (item.recurrenceId) {
       const r = recurrences.find((x) => x.id === item.recurrenceId);
       if (!r) return;
       if (scope === "all") {
-        if (remove) await removeRecurrence(r.id);
-        else await updateRecurrenceAmount(r.id, value);
-      } else {
-        const nextRecs = recurrences.map((x) =>
+        if (remove) savedJump = await removeRecurrence(r.id);
+        else savedJump = await updateRecurrenceAmount(r.id, value);
+      } else {     const nextRecs = recurrences.map((x) =>
           x.id === r.id ? { ...x, skipped: [...x.skipped, item.date] } : x,
         );
         const nextEntries = remove
@@ -1455,9 +1455,10 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
                 horizonTransfer: true,
               },
             ];
-        await commit(nextEntries, nextRecs);
+      savedJump = await commit(nextEntries, nextRecs);
       }
     }
+    if (!savedJump) return;
     setHorizonJump(null);
   }
 
