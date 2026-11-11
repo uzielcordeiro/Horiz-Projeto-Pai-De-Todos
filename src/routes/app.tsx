@@ -1355,8 +1355,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     );
   }
 
-  async function setForecastDay(date: string, value: number | null | undefined) {
-    await commit(
+    async function setForecastDay(date: string, value: number | null | undefined) {
+    return await commit(
       entries,
       recurrences.map((r) => {
         if (r.id !== FORECAST_ID) return r;
@@ -2343,7 +2343,7 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                       </p>
                       {(() => {
                         const saveTop = edit !== undefined || forecastRestoring;
-                        const save = () => {
+                        const save = async () => {
                           if (saveTop && !forecastSpent.trim()) {
                             setForecastSpent("");
                             closeWindow();
@@ -2354,7 +2354,8 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                             setForecastShake((n) => n + 1);
                             return;
                           }
-                          void setForecastDay(formDate, v);
+                          const savedDay = await setForecastDay(formDate, v);
+                          if (!savedDay) return;
                           setForecastSpent("");
                           closeWindow();
                         };
@@ -2404,10 +2405,11 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                       {forecastRestoring ? null : edit !== undefined ? (
                         <button
                           type="button"
-                          onClick={() => {
-                            void setForecastDay(formDate, undefined);
+                            onClick={async () => {
                             setForecastSpent("");
                             setForecastRestoring(true);
+                            const restored = await setForecastDay(formDate, undefined);
+                            if (!restored) setForecastRestoring(false);
                           }}
                           className="h-10 w-full rounded-xl border border-primary/40 bg-primary/15 text-sm font-semibold text-primary"
                         >
@@ -2419,11 +2421,12 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => {
-                                void setForecastDay(formDate, null);
-                                setForecastConfirm(false);
-                                closeWindow();
-                              }}
+                            onClick={async () => {
+                            const deleted = await setForecastDay(formDate, null);
+                            if (!deleted) return;
+                            setForecastConfirm(false);
+                            closeWindow();
+                          }}
                               className="h-9 flex-1 rounded-lg bg-destructive text-sm font-semibold text-destructive-foreground"
                             >
                               sim, apagar
