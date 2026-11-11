@@ -1158,11 +1158,12 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
         return;
       }
 
+            let savedEdit = false;
       if (editTarget.type === "entry") {
         const original = entries.find((entry) => entry.id === editTarget.id);
         if (!original) return;
         if (isRec) {
-          await commit(entries.filter((en) => en.id !== editTarget.id), [
+          savedEdit = await commit(entries.filter((en) => en.id !== editTarget.id), [
             ...recurrences,
             {
               id: crypto.randomUUID(),
@@ -1183,7 +1184,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
             },
           ]);
         } else {
-          await commit(
+          savedEdit = await commit(
             entries.map((en) =>
               en.id === editTarget.id
                 ? {
@@ -1197,10 +1198,10 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
             recurrences,
           );
         }
-      } else if (isRec) {
+        } else if (isRec) {
         const original = recurrences.find((recurrence) => recurrence.id === editTarget.id);
         if (!original) return;
-        await commit(
+        savedEdit = await commit(
           entries,
           recurrences.map((r) =>
             r.id === editTarget.id
@@ -1223,7 +1224,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       } else {
         const original = recurrences.find((recurrence) => recurrence.id === editTarget.id);
         if (!original) return;
-        await commit(
+        savedEdit = await commit(
           [
             ...entries,
             {
@@ -1236,10 +1237,11 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
               horizonTransfer: original.horizonTransfer === true,
             },
           ],
-          recurrences.filter((r) => r.id !== editTarget.id),
+       recurrences.filter((r) => r.id !== editTarget.id),
         );
       }
 
+      if (!savedEdit) return;
       resetForm();
       setAdding(false);
       setSelectedDay(null);
