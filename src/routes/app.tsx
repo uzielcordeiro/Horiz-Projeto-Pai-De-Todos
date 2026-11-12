@@ -410,6 +410,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   const [installments, setInstallments] = useState("");
   const installmentsRef = useRef<HTMLInputElement>(null);
   const saveSeq = useRef(0);
+  const savingEntryRef = useRef(false);
+  const [savingEntry, setSavingEntry] = useState(false);
   const [daysOfMonth, setDaysOfMonth] = useState<number[]>([]);
 
   const [history, setHistory] = useState<{ entries: Entry[]; recurrences: Recurrence[] }[]>([]);
@@ -1089,7 +1091,20 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   const formWeekLimit = weeklyRepetitionLimit(formDate);
   const finiteRepetition = freq === "diario" || freq === "semanal";
 
-  async function saveEntry(e: React.FormEvent) {
+    async function saveEntry(e: React.FormEvent) {
+    e.preventDefault();
+    if (savingEntryRef.current) return;
+    savingEntryRef.current = true;
+    setSavingEntry(true);
+    try {
+      await saveEntryNow(e);
+    } finally {
+      savingEntryRef.current = false;
+      setSavingEntry(false);
+    }
+  }
+
+  async function saveEntryNow(e: React.FormEvent) {
     e.preventDefault();
     const value = parseAmount(amount);
     if (!Number.isFinite(value) || value <= 0) {
@@ -2738,9 +2753,10 @@ const showBackBtn = (windowMode === "add" || windowMode === "detail" || windowMo
 
               <button
                 type="submit"
-                className="h-12 w-full rounded-2xl bg-positive px-5 text-base font-semibold text-positive-foreground transition-opacity hover:opacity-90"
+                disabled={savingEntry}
+                className="h-12 w-full rounded-2xl bg-positive px-5 text-base font-semibold text-positive-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
               >
-                {windowMode === "edit" ? "salvar alterações" : `adicionar ${KINDS.find((k) => k.key === kind)?.title ?? kind}`}
+                {savingEntry ? "salvando..." : windowMode === "edit" ? "salvar alterações" : `adicionar ${KINDS.find((k) => k.key === kind)?.title ?? kind}`}
               </button>
             </form>
             )}
