@@ -27,6 +27,7 @@ import { HorizonDayList } from "@/components/HorizonDayList";
 import { accountCalendarLimit, horizonMonthRange, shiftCalendarMonth, shiftHorizonMonth } from "@/lib/calendar-navigation";
 import { userKey } from "@/lib/user-storage";
 import { useCalendarSwipe } from "@/hooks/use-calendar-swipe";
+import { startVersionCheck } from "@/lib/version-check";
 
 import { DailyForecastBoard, type ForecastItem } from "@/components/DailyForecastBoard";
 
@@ -324,6 +325,17 @@ function Index() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+    // Avisa quando sai versão nova do app. O cliente escolhe a hora de recarregar.
+  useEffect(() => {
+    return startVersionCheck(() => {
+      toast("Nova versão disponível. Salve o que está fazendo e recarregue.", {
+        duration: Infinity,
+        closeButton: true,
+        action: { label: "Recarregar", onClick: () => window.location.reload() },
+      });
+    });
   }, []);
 
   if (!userId) return <LoadingScreen />;
