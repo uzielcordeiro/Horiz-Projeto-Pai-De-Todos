@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSignOut } from "@/lib/session";
 import { SigningOut } from "@/components/SigningOut";
@@ -21,6 +21,8 @@ export function ProfileBoard() {
   const { signingOut, signOut } = useSignOut();
   const [profile, setProfile] = useState({ name: "", email: "" });
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -80,7 +82,7 @@ export function ProfileBoard() {
             key={key}
             variant="ghost"
             className="h-16 w-full justify-start gap-3 rounded-none px-4 text-left text-base font-medium text-foreground hover:bg-accent/60 sm:px-5"
-            onClick={() => { setDraft(profile); setSelected(key); }}
+            onClick={() => { setDraft(profile); setSaveErr(null); setSelected(key); }}
           >
             <Icon size={16} strokeWidth={2} className="shrink-0 text-muted-foreground" aria-hidden="true" />
             <span className="min-w-0 whitespace-normal">{label}</span>
@@ -94,22 +96,24 @@ export function ProfileBoard() {
           {selected === "edit" ? (
             <form className="space-y-4" onSubmit={async (event) => {
               event.preventDefault();
-              if (!draft.name.trim()) return;
+              if (!draft.name.trim() || savingRef.current) return;
+              savingRef.current = true;
+              setSaving(true);
               setSaveErr(null);
               try {
                 const { data } = await supabase.auth.getSession();
-                // Salvamos o whatsapp vazio para não quebrar a tipagem do backend se ela exigir
-                await saveProfile({ data: { token: data.session?.access_token ?? "", full_name: draft.name.trim(), whatsapp: "" } });
+                await saveProfile({ data: { token: data.session?.access_token ?? "", full_name: draft.name.trim() } });
                 setProfile({ ...profile, name: draft.name.trim() });
                 setSelected(null);
-              } catch (x) { setSaveErr((x as Error).message); }
+              } catch { setSaveErr("Erro ao salvar. Tente de novo."); }
+              finally { savingRef.current = false; setSaving(false); }
             }}>
               <label className="block space-y-2 text-sm text-muted-foreground">
                 <span>nome</span>
                 <input autoFocus required maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-foreground outline-none focus:border-primary" />
               </label>
               {saveErr && <p className="text-sm text-destructive">{saveErr}</p>}
-              <Button type="submit" className="w-full">salvar</Button>
+              <Button type="submit" className="w-full" disabled={saving}>{saving ? "salvando..." : "salvar"}</Button>
             </form>
           ) : selected === "exit" ? (
             <div className="space-y-4">
