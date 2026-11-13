@@ -129,11 +129,20 @@ export function forecastMonthAmounts(
   return out;
 }
 
-const amountOn = (rec: Recurrence, date: string) => {
+// monthCache vale só para uma chamada de occurrencesUntil: com dias editados, o mês da previsão
+// é calculado uma vez e reaproveitado pelos outros dias (mesmos valores, sem recalcular o mês todo a cada dia).
+const amountOn = (rec: Recurrence, date: string, monthCache?: Map<string, number[]>) => {
   if (rec.monthlyBudget == null && rec.weeklyBudget == null) return rec.amount;
   const { y, m, d } = parseIso(date);
-  if (rec.dayEdits && Object.keys(rec.dayEdits).length > 0)
-    return forecastMonthAmounts(rec.monthlyBudget ?? 0, rec.weeklyBudget ?? 0, rec.dayEdits, y, m)[d - 1] ?? 0;
+  if (rec.dayEdits && Object.keys(rec.dayEdits).length > 0) {
+    const key = `${y}-${m}`;
+    let amounts = monthCache?.get(key);
+    if (!amounts) {
+      amounts = forecastMonthAmounts(rec.monthlyBudget ?? 0, rec.weeklyBudget ?? 0, rec.dayEdits, y, m);
+      monthCache?.set(key, amounts);
+    }
+    return amounts[d - 1] ?? 0;
+  }
   return dailyBudgetForDay(rec.monthlyBudget ?? 0, rec.weeklyBudget ?? 0, y, m, d);
 };
 
@@ -143,6 +152,7 @@ export function occurrencesUntil(rec: Recurrence, untilDate: string): Occurrence
   const out: Occurrence[] = [];
   const total = rec.installments ?? null;
   let index = 0;
+  const monthCache = new Map<string, number[]>();
 
   const push = (date: string) => {
     if (date < rec.startDate) return false;
@@ -155,7 +165,7 @@ export function occurrencesUntil(rec: Recurrence, untilDate: string): Occurrence
         recurrenceId: rec.id,
         kind: rec.kind,
         date,
-        amount: amountOn(rec, date),
+        amount: amountOn(rec, date, monthCache),
         name: rec.name,
         label: rec.label,
         tags: rec.tags ?? [],
@@ -181,7 +191,7 @@ export function occurrencesUntil(rec: Recurrence, untilDate: string): Occurrence
           recurrenceId: rec.id,
           kind: rec.kind,
           date,
-          amount: amountOn(rec, date),
+          amount: amountOn(rec, date, monthCache),
           name: rec.name,
           label: rec.label,
           tags: rec.tags ?? [],
