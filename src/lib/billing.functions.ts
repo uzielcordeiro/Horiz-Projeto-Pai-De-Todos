@@ -47,12 +47,16 @@ export type Account = Awaited<ReturnType<typeof getAccount>>;
 
 export const saveProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    tokenSchema.extend({ full_name: z.string().trim().min(1).max(80), whatsapp: z.string().trim().min(8).max(20) }).parse(d),
+    tokenSchema.extend({ full_name: z.string().trim().min(1).max(80), whatsapp: z.string().trim().min(8).max(20).optional() }).parse(d),
   )
   .handler(async ({ data }) => {
     const { db, user } = await verifyUser(data.token);
-    await upsertByUser(db, user.id, { full_name: data.full_name, whatsapp: data.whatsapp });
-    await db.auth.admin.updateUserById(user.id, { user_metadata: { full_name: data.full_name, whatsapp: data.whatsapp } });
+    const fields: Record<string, unknown> = { full_name: data.full_name };
+    if (data.whatsapp !== undefined) fields["whatsapp"] = data.whatsapp;
+    await upsertByUser(db, user.id, fields);
+    const meta = { ...(user.user_metadata ?? {}), ...fields };
+    const { error: metaErr } = await db.auth.admin.updateUserById(user.id, { user_metadata: meta });
+    if (metaErr) console.error("saveProfile: metadata", metaErr.message);
     return { ok: true };
   });
 
