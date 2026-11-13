@@ -739,20 +739,26 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       if (!k) continue;
       
       const sign = balanceSign(r.kind as Kind, r.horizonTransfer);
-      opening = cents(opening + sign * sumBefore(r, first));
-      
-      for (const { y, m } of range) {
-        for (const o of occurrencesInMonth(r, y, m)) {
-          byDate.set(
-            o.date,
-            cents((byDate.get(o.date) ?? 0) + balanceSign(o.kind as Kind, o.horizonTransfer) * o.amount),
-          );
-          
-          // Etiqueta se a repetição no dia gera entrada ou saída
-          if (o.kind === "entradas") incomeDays.add(o.date);
-          else if (o.kind !== "entradas" && o.kind !== "diarios") expenseDays.add(o.date);
+
+      // Uma lista só por série, até o fim do último mês. O que vem antes do 1º mês vai para o saldo de abertura.
+      const lastMonth = range[range.length - 1]!;
+      const lastEnd = iso(lastMonth.y, lastMonth.m, new Date(lastMonth.y, lastMonth.m + 1, 0).getDate());
+      let before = 0;
+      for (const o of occurrencesUntil(r, lastEnd)) {
+        if (o.date < first) {
+          before = cents(before + o.amount);
+          continue;
         }
+        byDate.set(
+          o.date,
+          cents((byDate.get(o.date) ?? 0) + balanceSign(o.kind as Kind, o.horizonTransfer) * o.amount),
+        );
+
+        // Etiqueta se a repetição no dia gera entrada ou saída
+        if (o.kind === "entradas") incomeDays.add(o.date);
+        else if (o.kind !== "entradas" && o.kind !== "diarios") expenseDays.add(o.date);
       }
+      opening = cents(opening + sign * before);
     }
 
     const out: HorizonMonth[] = [];
