@@ -6,12 +6,17 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  ScriptOnce,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+
+// Roda no servidor, antes de a tela aparecer: no /app, se o tema guardado for "dark",
+// liga a classe "dark" na hora (sem esperar o React). As outras páginas não mudam.
+const THEME_SCRIPT = `(function(){try{var p=location.pathname;if((p==="/app"||p.indexOf("/app/")===0)&&localStorage.getItem("theme")==="dark"){document.documentElement.classList.add("dark");}}catch(e){}})()`;
 
 function NotFoundComponent() {
   return (
@@ -109,11 +114,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
+        <ScriptOnce>{THEME_SCRIPT}</ScriptOnce>
         {children}
         <Scripts />
       </body>
