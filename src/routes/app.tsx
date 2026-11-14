@@ -29,6 +29,7 @@ import { userKey } from "@/lib/user-storage";
 import { useCalendarSwipe } from "@/hooks/use-calendar-swipe";
 import { startVersionCheck } from "@/lib/version-check";
 import { BotaoSairDaConta } from "@/components/BotaoSairDaConta";
+import { lerTodasAsPaginas } from "@/lib/ler-todas-as-paginas";
 
 import { DailyForecastBoard, type ForecastItem } from "@/components/DailyForecastBoard";
 
@@ -447,9 +448,16 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       if (!userId) return;
 
         const [txRes, recRes, castRes, subRes, editsRes] = await Promise.all([
-        supabase.from("transactions").select("*").eq("user_id", userId).order("date", { ascending: false }),
-        supabase.from("recurrences").select("payload").eq("user_id", userId),
-        supabase.from("forecasts").select("payload").eq("user_id", userId),
+                // Lê em fatias de 1.000 (o Supabase corta em silêncio acima disso); ordem fixa: data e depois id.
+        lerTodasAsPaginas((de, ate) =>
+          supabase.from("transactions").select("*", { count: "exact" }).eq("user_id", userId).order("date", { ascending: false }).order("id").range(de, ate),
+        ),
+        lerTodasAsPaginas((de, ate) =>
+          supabase.from("recurrences").select("id, payload", { count: "exact" }).eq("user_id", userId).order("id").range(de, ate),
+        ),
+        lerTodasAsPaginas((de, ate) =>
+          supabase.from("forecasts").select("id, payload", { count: "exact" }).eq("user_id", userId).order("id").range(de, ate),
+        ),
         supabase.from("subscriptions").select("status").eq("user_id", userId).maybeSingle(),
         supabase.from("forecast_day_edits").select("edits").eq("user_id", userId).maybeSingle()
       ]);
