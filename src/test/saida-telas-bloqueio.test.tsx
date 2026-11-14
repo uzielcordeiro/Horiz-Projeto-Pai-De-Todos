@@ -35,6 +35,7 @@ vi.mock("@/integrations/supabase/client", () => {
       select: () => c,
       eq: () => c,
       order: () => c,
+      range: () => c,
       maybeSingle: async () => ({
         data: nome === "subscriptions" ? (h.status ? { status: h.status } : null) : null,
         error: null,
