@@ -423,6 +423,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   const [installments, setInstallments] = useState("");
   const installmentsRef = useRef<HTMLInputElement>(null);
   const saveSeq = useRef(0);
+  const commitRef = useRef<((e: Entry[], r: Recurrence[], f?: ForecastItem[]) => Promise<boolean>) | null>(null);
   const savingEntryRef = useRef(false);
   const [savingEntry, setSavingEntry] = useState(false);
   const [daysOfMonth, setDaysOfMonth] = useState<number[]>([]);
@@ -629,6 +630,11 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     }
     return true;
   }
+
+    // Guarda sempre o commit da tela mais nova (o Desfazer do reset precisa dele depois do reset).
+  useLayoutEffect(() => {
+    commitRef.current = commit;
+  });
 
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
 
@@ -1501,7 +1507,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   }
 
   async function deleteAll() {
-    await commit([], [], []);
+  return await commit([], [], []);
   }
 
   async function clearRange(startIso: string, endIso: string, months: { y: number; m: number }[]) {
@@ -1515,7 +1521,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
       }
       if (dates.length) skipByRec.set(r.id, dates);
     }
-    await commit(
+    return await commit(
       entries.filter((e) => e.date < startIso || e.date > endIso),
       recurrences.map((r) => {
         const dates = skipByRec.get(r.id);
@@ -1526,25 +1532,28 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
   async function clearMonth() {
     const last = new Date(cursor.y, cursor.m + 1, 0).getDate();
-    await clearRange(iso(cursor.y, cursor.m, 1), iso(cursor.y, cursor.m, last), [
+   return await clearRange(iso(cursor.y, cursor.m, 1), iso(cursor.y, cursor.m, last), [
       { y: cursor.y, m: cursor.m },
     ]);
   }
 
   function resetCalendar(scope: "month" | "all") {
      const snapshot = { entries, recurrences, forecastItems, history, dayEdits };
+        let done: Promise<boolean>;
     if (scope === "month") {
-      void clearMonth();
+      done = clearMonth();
     } else {
-      void deleteAll();
+      done = deleteAll();
       setHistory([]);
     }
     return () => {
-      setEntries(snapshot.entries);
-      setRecurrences(snapshot.recurrences);
-      setForecastItems(snapshot.forecastItems);
-      setDayEdits(snapshot.dayEdits);
-      setHistory(snapshot.history);
+      void (async () => {
+        // Só desfaz se o banco aceitou o reset; se recusou, a tela já voltou sozinha.
+        if (!(await done)) return;
+        // Regrava no banco pelo commit mais novo (o desta função ainda não sabe do reset).
+        const gravou = await commitRef.current?.(snapshot.entries, snapshot.recurrences, snapshot.forecastItems);
+        if (gravou) setHistory(snapshot.history);
+      })();
     };
   }
 
