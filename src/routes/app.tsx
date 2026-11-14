@@ -28,6 +28,7 @@ import { accountCalendarLimit, horizonMonthRange, shiftCalendarMonth, shiftHoriz
 import { userKey } from "@/lib/user-storage";
 import { useCalendarSwipe } from "@/hooks/use-calendar-swipe";
 import { startVersionCheck } from "@/lib/version-check";
+import { BotaoSairDaConta } from "@/components/BotaoSairDaConta";
 
 import { DailyForecastBoard, type ForecastItem } from "@/components/DailyForecastBoard";
 
@@ -1585,13 +1586,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
             >
               Escolher Plano
             </Button>
-            <Button
-              variant="ghost"
-              onClick={() => supabase.auth.signOut()}
-              className="h-12 w-full rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              Sair da conta
-            </Button>
+           <BotaoSairDaConta />
           </div>
         </div>
       </div>
@@ -1618,13 +1613,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
             >
               Atualizar Pagamento
             </Button>
-            <Button
-              variant="ghost"
-              onClick={() => supabase.auth.signOut()}
-              className="h-12 w-full rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              Sair da conta
-            </Button>
+           <BotaoSairDaConta />
           </div>
         </div>
       </div>
