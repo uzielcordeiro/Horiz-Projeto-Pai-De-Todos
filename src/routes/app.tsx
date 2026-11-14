@@ -350,6 +350,8 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
   const [entries, setEntries] = useState<Entry[]>([]);
   const [recurrences, setRecurrences] = useState<Recurrence[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<null | "session" | "other">(null);
+  const [loadTry, setLoadTry] = useState(0);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   
   const [cursor, setCursor] = useState(() => {
@@ -454,6 +456,17 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
       if (cancelled) return;
       
+            // Se qualquer leitura falhou, NÃO abre o calendário vazio nem diz "não é assinante":
+      // mostra a tela de erro e não deixa gravar nada.
+      const leituras = [txRes, recRes, castRes, subRes, editsRes];
+      const falha = leituras.find((r) => r.error);
+      if (falha) {
+        const sessao = leituras.some((r) => r.status === 401) || /jwt/i.test(falha.error?.message ?? "");
+        setLoadError(sessao ? "session" : "other");
+        return;
+      }
+      setLoadError(null);
+
       if (subRes.data) {
         setSubscriptionStatus(subRes.data.status);
       } else {
@@ -491,8 +504,7 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
     return () => {
       cancelled = true;
     };
-  }, [userId]);
-
+    }, [userId, loadTry]);
   useLayoutEffect(() => {
     if (!loaded) return;
     const { monthly: monthlyBudget, weekly: weeklyBudget } = forecastBudgets(forecastItems);
@@ -1572,6 +1584,37 @@ function IndexForUser({ userId, createdAt }: { userId: string; createdAt: string
 
   const isHorizon = view === "horizonte";
   const isSaldos = view === "saldos" && !adding;
+
+    if (loadError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <h1 className="mb-3 font-display text-2xl font-semibold text-foreground">
+            {loadError === "session" ? "Sua sessão expirou" : "Não conseguimos carregar seus dados"}
+          </h1>
+          <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+            {loadError === "session"
+              ? "Entre de novo para continuar. Seus dados continuam salvos."
+              : "Sua conexão pode ter falhado. Nada foi apagado. Tente de novo."}
+          </p>
+          <div className="space-y-3">
+            {loadError === "other" && (
+              <Button
+                onClick={() => {
+                  setLoadError(null);
+                  setLoadTry((n) => n + 1);
+                }}
+                className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                Tentar de novo
+              </Button>
+            )}
+            <BotaoSairDaConta />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!loaded) return <LoadingScreen />;
 
