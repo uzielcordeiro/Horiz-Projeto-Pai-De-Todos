@@ -53,6 +53,7 @@ vi.mock("@/integrations/supabase/client", () => {
       select: () => c,
       eq: () => c,
       order: () => c,
+      range: () => c,
       maybeSingle: async () => ({ data: (h.tabelas[nome] ?? [])[0] ?? null, error: null }),
       then: (ok: any, err: any) => Promise.resolve({ data: h.tabelas[nome] ?? [], error: null }).then(ok, err),
     };
